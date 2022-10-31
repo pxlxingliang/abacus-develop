@@ -23,3 +23,5 @@ RUN git clone https://github.com/deepmodeling/abacus-develop.git --depth 1 && \
     cmake --build build -j`nproc` && \
     cmake --install build && \
     cd .. && rm -rf abacus-develop
+
+ENV OPENBLAS_NUM_THREADS=1    
