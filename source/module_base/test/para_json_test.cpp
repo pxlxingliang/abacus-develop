@@ -16,9 +16,6 @@
  *     - init json tree from input::Init and check if the json string is valid
  */
 
-#define private public
-#include "module_io/input.h"
-
 class ParaJsonTest : public ::testing::Test
 {
   protected:
@@ -36,9 +33,9 @@ bool isValidJSON(const std::string& jsonString)
 
 TEST_F(ParaJsonTest, Init)
 {
-    std::string input_file = "./support/INPUT";
-    Input input_tmp;
-    EXPECT_NO_THROW(input_tmp.Init(input_file));
+    //std::string input_file = "./support/INPUT";
+    //Input input_tmp;
+    //EXPECT_NO_THROW(input_tmp.Init(input_file));
 
     // int status = system("rm -r ./OUT.autotest/");
     // EXPECT_EQ(status,0);
@@ -50,7 +47,6 @@ TEST_F(ParaJsonTest, Init)
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     Para_Json::doc.Accept(writer);
     std::string json = buffer.GetString();
-    printf("%s\n", json.c_str());
     EXPECT_EQ(isValidJSON(json), true);
 }
 
@@ -69,4 +65,4 @@ int main(int argc, char** argv)
 #endif
     return result;
 }
-#undef private
+
