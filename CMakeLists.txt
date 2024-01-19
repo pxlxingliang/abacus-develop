@@ -51,10 +51,13 @@ if(ENABLE_RAPIDJSON)
       GIT_SHALLOW TRUE
       GIT_PROGRESS TRUE
     )
+    set(RAPIDJSON_BUILD_TESTS OFF CACHE INTERNAL "")
+    set(RAPIDJSON_BUILD_EXAMPLES OFF CACHE INTERNAL "")
     FetchContent_MakeAvailable(rapidjson)
-    set(RapidJSON_INCLUDE_PATH "${CMAKE_CURRENT_BINARY_DIR}/_deps/rapidjson-src/include/")
+    set(RapidJSON_INCLUDE_PATH "${rapidjson_SOURCE_DIR}/include")
   endif()
   add_compile_definitions(__RAPIDJSON)
+  add_definitions(-DRAPIDJSON_HAS_CXX11_NOEXCEPT=0)
   include_directories(${RapidJSON_INCLUDE_PATH})
 endif()
 
