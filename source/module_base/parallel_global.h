@@ -25,6 +25,8 @@ namespace Parallel_Global
 //---------------------------
 // call at the very first.
 //---------------------------
+int mpi_number=0;
+int omp_number=0;
 void read_mpi_parameters(int argc, char** argv);
 #ifdef __MPI
 void myProd(std::complex<double>* in, std::complex<double>* inout, int* len, MPI_Datatype* dptr);

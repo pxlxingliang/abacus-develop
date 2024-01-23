@@ -697,6 +697,11 @@ if (ENABLE_LIBRI)
           ri)
 endif()
 
+if (ENABLE_RAPIDJSON)
+  target_link_libraries(${ABACUS_BIN_NAME}
+      json_output)
+endif()
+
 install(PROGRAMS ${ABACUS_BIN_PATH}
     TYPE BIN
     #DESTINATION ${CMAKE_INSTALL_BINDIR}

@@ -9,6 +9,7 @@
 #include "module_io/input_conv.h"
 #include "module_io/print_info.h"
 #include "module_io/winput.h"
+#include "module_io/para_json.h"
 
 Driver::Driver()
 {
@@ -37,6 +38,9 @@ void Driver::init()
 
     // (4) close all of the running logs
     INPUT.close_log();
+
+    // (5) output the json file
+    Json::json_output();
 
     return;
 }
