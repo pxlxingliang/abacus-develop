@@ -27,7 +27,9 @@ class Diago_DavSubspace
                       const double& diag_thr_in,
                       const int& diag_nmax_in,
                       const bool& need_subspace_in,
-                      const diag_comm_info& diag_comm_in);
+                      const diag_comm_info& diag_comm_in,
+                      const int diago_dav_method_in,
+                      const int block_size_in);
 
     ~Diago_DavSubspace();
 
@@ -134,6 +136,9 @@ class Diago_DavSubspace
                   const double* ethr_band);
 
     bool test_exit_cond(const int& ntry, const int& notconv, const bool& scf);
+
+    int diago_dav_method; // 0: LAPACK, 1: ELPA, 2: ScaLAPACK, 3: new elpa
+    int block_size = 0; // the block size in 2d block cyclic distribution
 
     using resmem_complex_op = base_device::memory::resize_memory_op<T, Device>;
     using delmem_complex_op = base_device::memory::delete_memory_op<T, Device>;

@@ -1,0 +1,591 @@
+#include <complex>
+#include "string.h"
+#include "module_base/timer.h"
+
+#include "diago_scalapack.h"
+#include "module_base/scalapack_connector.h"
+
+namespace hsolver
+{
+
+#ifdef __MPI
+void post_processing(const int info, 
+                    const std::vector<int>& ifail,
+                    const std::vector<int>& iclustr,
+                    const int M,
+                    const int NZ,
+                    const int nbands, 
+                    int& degeneracy_max)
+{
+    const std::string str_info = "info = " + ModuleBase::GlobalFunc::TO_STRING(info) + ".\n";
+    const std::string str_FILE
+        = ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line " + ModuleBase::GlobalFunc::TO_STRING(__LINE__) + ".\n";
+    const std::string str_info_FILE = str_info + str_FILE;
+
+    if (info == 0)
+    {
+        return;
+    }
+    else if (info < 0)
+    {
+        const int info_negative = -info;
+        const std::string str_index
+            = (info_negative > 100)
+                  ? ModuleBase::GlobalFunc::TO_STRING(info_negative / 100) + "-th argument "
+                        + ModuleBase::GlobalFunc::TO_STRING(info_negative % 100) + "-entry is illegal.\n"
+                  : ModuleBase::GlobalFunc::TO_STRING(info_negative) + "-th argument is illegal.\n";
+        throw std::runtime_error(str_info_FILE + str_index);
+    }
+    else if (info % 2)
+    {
+        std::string str_ifail = "ifail = ";
+        for (const int i: ifail)
+        {
+            str_ifail += ModuleBase::GlobalFunc::TO_STRING(i) + " ";
+        }
+        throw std::runtime_error(str_info_FILE + str_ifail);
+    }
+    else if (info / 2 % 2)
+    {
+        int degeneracy_need = 0;
+        for (int irank = 0; irank < iclustr.size()/2; ++irank)
+        {
+            degeneracy_need = std::max(degeneracy_need, iclustr[2 * irank + 1] - iclustr[2 * irank]);
+        }
+        const std::string str_need = "degeneracy_need = " + ModuleBase::GlobalFunc::TO_STRING(degeneracy_need) + ".\n";
+        const std::string str_saved
+            = "degeneracy_saved = " + ModuleBase::GlobalFunc::TO_STRING(degeneracy_max) + ".\n";
+        if (degeneracy_need <= degeneracy_max)
+        {
+            throw std::runtime_error(str_info_FILE + str_need + str_saved);
+        }
+        else
+        {
+            GlobalV::ofs_running << str_need << str_saved;
+            degeneracy_max = degeneracy_need;
+            return;
+        }
+    }
+    else if (info / 4 % 2)
+    {
+        const std::string str_M = "M = " + ModuleBase::GlobalFunc::TO_STRING(M) + ".\n";
+        const std::string str_NZ = "NZ = " + ModuleBase::GlobalFunc::TO_STRING(NZ) + ".\n";
+        const std::string str_NBANDS
+            = "NBANDS = " + ModuleBase::GlobalFunc::TO_STRING(nbands) + ".\n";
+        throw std::runtime_error(str_info_FILE + str_M + str_NZ + str_NBANDS);
+    }
+    else if (info / 16 % 2)
+    {
+        const std::string str_npos = "not positive definite = " + ModuleBase::GlobalFunc::TO_STRING(ifail[0]) + ".\n";
+        throw std::runtime_error(str_info_FILE + str_npos);
+    }
+    else
+    {
+        throw std::runtime_error(str_info_FILE);
+    }
+}
+
+void pxxxgvx_diag(const int* const desc,
+                  const int ncol,
+                  const int nrow,
+                  const int ndim_global,
+                  const int nbands,
+                  const double* const h_mat,
+                  const double* const s_mat,
+                  double* const ekb,
+                  double* const wfc_2d)
+{
+    ModuleBase::matrix h_tmp(ncol, nrow, false);
+    memcpy(h_tmp.c, h_mat, sizeof(double) * ncol * nrow);
+    ModuleBase::matrix s_tmp(ncol, nrow, false);
+    memcpy(s_tmp.c, s_mat, sizeof(double) * ncol * nrow);
+
+    const char jobz = 'V', range = 'I', uplo = 'U';
+    const int itype = 1, il = 1, iu = nbands, one = 1;
+    int M = 0, NZ = 0, lwork = -1, liwork = -1, info = 0;
+    double vl = 0, vu = 0;
+    const double abstol = 0, orfac = -1;
+    std::vector<double> work(3, 0);
+    std::vector<int> iwork(1, 0);
+    std::vector<int> ifail(ndim_global, 0);
+    std::vector<int> iclustr(2 * GlobalV::DSIZE);
+    std::vector<double> gap(GlobalV::DSIZE);
+
+    pdsygvx_(&itype,
+             &jobz,
+             &range,
+             &uplo,
+             &ndim_global,
+             h_tmp.c,
+             &one,
+             &one,
+             desc,
+             s_tmp.c,
+             &one,
+             &one,
+             desc,
+             &vl,
+             &vu,
+             &il,
+             &iu,
+             &abstol,
+             &M,
+             &NZ,
+             ekb,
+             &orfac,
+             wfc_2d,
+             &one,
+             &one,
+             desc,
+             work.data(),
+             &lwork,
+             iwork.data(),
+             &liwork,
+             ifail.data(),
+             iclustr.data(),
+             gap.data(),
+             &info);
+    if (info)
+    {
+        throw std::runtime_error("info = " + ModuleBase::GlobalFunc::TO_STRING(info) + ".\n"
+                                 + ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line "
+                                 + ModuleBase::GlobalFunc::TO_STRING(__LINE__));
+    }
+
+    lwork = work[0];
+    work.resize(std::max(lwork, 3), 0);
+    liwork = iwork[0];
+    iwork.resize(liwork, 0);
+
+    pdsygvx_(&itype,
+             &jobz,
+             &range,
+             &uplo,
+             &ndim_global,
+             h_tmp.c,
+             &one,
+             &one,
+             desc,
+             s_tmp.c,
+             &one,
+             &one,
+             desc,
+             &vl,
+             &vu,
+             &il,
+             &iu,
+             &abstol,
+             &M,
+             &NZ,
+             ekb,
+             &orfac,
+             wfc_2d,
+             &one,
+             &one,
+             desc,
+             work.data(),
+             &lwork,
+             iwork.data(),
+             &liwork,
+             ifail.data(),
+             iclustr.data(),
+             gap.data(),
+             &info);
+
+
+    if (info == 0)
+    {
+        return ;
+    }
+    int degeneracy_max = 12;
+    post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
+}
+
+void pxxxgvx_diag(const int* const desc,
+                  const int ncol,
+                  const int nrow,
+                  const int ndim_global,
+                  const int nbands,
+                  const std::complex<double>* const h_mat,
+                  const std::complex<double>* const s_mat,
+                  double* const ekb,
+                  std::complex<double>* const wfc_2d)
+{
+    int degeneracy_max = 12;
+    while (true)
+    {
+        ModuleBase::ComplexMatrix h_tmp(ncol, nrow, false);
+        memcpy(h_tmp.c, h_mat, sizeof(std::complex<double>) * ncol * nrow);
+        ModuleBase::ComplexMatrix s_tmp(ncol, nrow, false);
+        memcpy(s_tmp.c, s_mat, sizeof(std::complex<double>) * ncol * nrow);
+
+
+        const char jobz = 'V', range = 'I', uplo = 'U';
+        const int itype = 1, il = 1, iu = nbands, one = 1;
+        int M = 0, NZ = 0, lwork = -1, lrwork = -1, liwork = -1, info = 0;
+        const double abstol = 0, orfac = -1;
+        // Note: pzhegvx_ has a bug
+        //       We must give vl,vu a value, although we do not use range 'V'
+        //       We must give rwork at least a memory of sizeof(double) * 3
+        const double vl = 0, vu = 0;
+        std::vector<std::complex<double>> work(1, 0);
+        std::vector<double> rwork(3, 0);
+        std::vector<int> iwork(1, 0);
+        std::vector<int> ifail(ndim_global, 0);
+        std::vector<int> iclustr(2 * GlobalV::DSIZE);
+        std::vector<double> gap(GlobalV::DSIZE);
+        //std::cout << "GlobalV::DSIZE: " << GlobalV::DSIZE << std::endl;
+
+        pzhegvx_(&itype,
+                 &jobz,
+                 &range,
+                 &uplo,
+                 &ndim_global,
+                 h_tmp.c,
+                 &one,
+                 &one,
+                 desc,
+                 s_tmp.c,
+                 &one,
+                 &one,
+                 desc,
+                 &vl,
+                 &vu,
+                 &il,
+                 &iu,
+                 &abstol,
+                 &M,
+                 &NZ,
+                 ekb,
+                 &orfac,
+                 wfc_2d,
+                 &one,
+                 &one,
+                 desc,
+                 work.data(),
+                 &lwork,
+                 rwork.data(),
+                 &lrwork,
+                 iwork.data(),
+                 &liwork,
+                 ifail.data(),
+                 iclustr.data(),
+                 gap.data(),
+                 &info);
+
+        if (info)
+        {
+            throw std::runtime_error("info=" + ModuleBase::GlobalFunc::TO_STRING(info) + ". "
+                                     + ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line "
+                                     + ModuleBase::GlobalFunc::TO_STRING(__LINE__));
+        }
+
+        lwork = work[0].real();
+        work.resize(lwork, 0);
+        lrwork = rwork[0] + degeneracy_max * ndim_global;
+
+        int maxlrwork = std::max(lrwork, 3);
+        rwork.resize(maxlrwork, 0);
+        liwork = iwork[0];
+        iwork.resize(liwork, 0);
+
+        pzhegvx_(&itype,
+                 &jobz,
+                 &range,
+                 &uplo,
+                 &ndim_global,
+                 h_tmp.c,
+                 &one,
+                 &one,
+                 desc,
+                 s_tmp.c,
+                 &one,
+                 &one,
+                 desc,
+                 &vl,
+                 &vu,
+                 &il,
+                 &iu,
+                 &abstol,
+                 &M,
+                 &NZ,
+                 ekb,
+                 &orfac,
+                 wfc_2d,
+                 &one,
+                 &one,
+                 desc,
+                 work.data(),
+                 &lwork,
+                 rwork.data(),
+                 &lrwork,
+                 iwork.data(),
+                 &liwork,
+                 ifail.data(),
+                 iclustr.data(),
+                 gap.data(),
+                 &info);
+
+        if (info == 0)
+        {
+            return;
+        }
+        post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
+    }
+}
+
+
+void pxxxgvx_diag(const int *const desc,
+                      const int ncol,
+                      const int nrow,
+                      const int ndim_global,
+                      const int nbands,
+                      const float *const h_mat,
+                      const float *const s_mat,
+                      float *const ekb,
+                      float *const wfc_2d)
+{
+    std::vector<float> h_tmp(ncol * nrow);
+    std::vector<float> s_tmp(ncol * nrow);
+    memcpy(h_tmp.data(), h_mat, sizeof(float) * ncol * nrow);
+    memcpy(s_tmp.data(), s_mat, sizeof(float) * ncol * nrow);
+
+    const char jobz = 'V', range = 'I', uplo = 'U';
+    const int itype = 1, il = 1, iu = nbands, one = 1;
+    int M = 0, NZ = 0, lwork = -1, liwork = -1, info = 0;
+    float vl = 0, vu = 0;
+    const float abstol = 0, orfac = -1;
+    std::vector<float> work(3, 0);
+    std::vector<int> iwork(1, 0);
+    std::vector<int> ifail(ndim_global, 0);
+    std::vector<int> iclustr(2 * GlobalV::DSIZE);
+    std::vector<float> gap(GlobalV::DSIZE);
+
+    pssygvx_(&itype,
+             &jobz,
+             &range,
+             &uplo,
+             &ndim_global,
+             h_tmp.data(),
+             &one,
+             &one,
+             desc,
+             s_tmp.data(),
+             &one,
+             &one,
+             desc,
+             &vl,
+             &vu,
+             &il,
+             &iu,
+             &abstol,
+             &M,
+             &NZ,
+             ekb,
+             &orfac,
+             wfc_2d,
+             &one,
+             &one,
+             desc,
+             work.data(),
+             &lwork,
+             iwork.data(),
+             &liwork,
+             ifail.data(),
+             iclustr.data(),
+             gap.data(),
+             &info);
+    if (info)
+    {
+        throw std::runtime_error("info = " + ModuleBase::GlobalFunc::TO_STRING(info) + ".\n"
+                                 + ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line "
+                                 + ModuleBase::GlobalFunc::TO_STRING(__LINE__));
+    }
+
+    lwork = work[0];
+    work.resize(std::max(lwork, 3), 0);
+    liwork = iwork[0];
+    iwork.resize(liwork, 0);
+
+    pssygvx_(&itype,
+             &jobz,
+             &range,
+             &uplo,
+             &ndim_global,
+             h_tmp.data(),
+             &one,
+             &one,
+             desc,
+             s_tmp.data(),
+             &one,
+             &one,
+             desc,
+             &vl,
+             &vu,
+             &il,
+             &iu,
+             &abstol,
+             &M,
+             &NZ,
+             ekb,
+             &orfac,
+             wfc_2d,
+             &one,
+             &one,
+             desc,
+             work.data(),
+             &lwork,
+             iwork.data(),
+             &liwork,
+             ifail.data(),
+             iclustr.data(),
+             gap.data(),
+             &info);
+
+
+    if (info == 0)
+    {
+        return ;
+    }
+    int degeneracy_max = 12;
+    post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
+}    
+
+void pxxxgvx_diag(const int *const desc,
+                      const int ncol,
+                      const int nrow,
+                      const int ndim_global,
+                      const int nbands,
+                      const std::complex<float> *const h_mat,
+                      const std::complex<float> *const s_mat,
+                      float *const ekb,
+                      std::complex<float> *const wfc_2d)
+{
+    int degeneracy_max = 12;
+    while (true)
+    {
+        std::vector<std::complex<float>> h_tmp(ncol * nrow);
+        std::vector<std::complex<float>> s_tmp(ncol * nrow);
+        memcpy(h_tmp.data(), h_mat, sizeof(std::complex<float>) * ncol * nrow);
+        memcpy(s_tmp.data(), s_mat, sizeof(std::complex<float>) * ncol * nrow);
+
+        const char jobz = 'V', range = 'I', uplo = 'U';
+        const int itype = 1, il = 1, iu = nbands, one = 1;
+        int M = 0, NZ = 0, lwork = -1, lrwork = -1, liwork = -1, info = 0;
+        const float abstol = 0, orfac = -1;
+        // Note: pzhegvx_ has a bug
+        //       We must give vl,vu a value, although we do not use range 'V'
+        //       We must give rwork at least a memory of sizeof(float) * 3
+        const float vl = 0, vu = 0;
+        std::vector<std::complex<float>> work(1, 0);
+        std::vector<float> rwork(3, 0);
+        std::vector<int> iwork(1, 0);
+        std::vector<int> ifail(ndim_global, 0);
+        std::vector<int> iclustr(2 * GlobalV::DSIZE);
+        std::vector<float> gap(GlobalV::DSIZE);
+
+        pchegvx_(&itype,
+                 &jobz,
+                 &range,
+                 &uplo,
+                 &ndim_global,
+                 h_tmp.data(),
+                 &one,
+                 &one,
+                 desc,
+                 s_tmp.data(),
+                 &one,
+                 &one,
+                 desc,
+                 &vl,
+                 &vu,
+                 &il,
+                 &iu,
+                    &abstol,
+                    &M,
+                    &NZ,
+                    ekb,
+                    &orfac,
+                    wfc_2d,
+                    &one,
+                    &one,
+                    desc,
+                    work.data(),
+                    &lwork,
+                    rwork.data(),
+                    &lrwork,
+                    iwork.data(),
+                    &liwork,
+                    ifail.data(),
+                    iclustr.data(),
+                    gap.data(),
+                    &info);
+
+        if (info)
+        {
+            throw std::runtime_error("info=" + ModuleBase::GlobalFunc::TO_STRING(info) + ". "
+                                     + ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line "
+                                     + ModuleBase::GlobalFunc::TO_STRING(__LINE__));
+        }
+
+        lwork = work[0].real();
+        work.resize(lwork, 0);
+        lrwork = rwork[0] + degeneracy_max * ndim_global;
+
+        int maxlrwork = std::max(lrwork, 3);
+        rwork.resize(maxlrwork, 0);
+        liwork = iwork[0];
+        iwork.resize(liwork, 0);
+
+        pchegvx_(&itype,
+                 &jobz,
+                 &range,
+                 &uplo,
+                 &ndim_global,
+                 h_tmp.data(),
+                 &one,
+                 &one,
+                 desc,
+                 s_tmp.data(),
+                 &one,
+                 &one,
+                 desc,
+                 &vl,
+                 &vu,
+                 &il,
+                 &iu,
+                 &abstol,
+                 &M,
+                 &NZ,
+                 ekb,
+                 &orfac,
+                 wfc_2d,
+                 &one,
+                 &one,
+                 desc,
+                 work.data(),
+                 &lwork,
+                 rwork.data(),
+                 &lrwork,
+                 iwork.data(),
+                 &liwork,
+                 ifail.data(),
+                 iclustr.data(),
+                 gap.data(),
+                 &info);
+
+        if (info == 0)
+        {
+            return;
+        }
+        post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
+    }
+}
+
+
+
+
+
+#endif
+
+} // namespace

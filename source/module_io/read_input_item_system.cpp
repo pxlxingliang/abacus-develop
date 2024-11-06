@@ -444,6 +444,12 @@ void ReadInput::item_system()
         this->add_item(item);
     }
     {
+        Input_Item item("diago_dav_method");
+        item.annotation = "the method of solving the generalized eigenvalues of the HS of subspaces in the Dav subspace method. 0:LaPack; 1:elpa, 2:scalapack";
+        read_sync_int(input.diago_dav_method);
+        this->add_item(item);
+    }
+    {
         Input_Item item("init_wfc");
         item.annotation = "start wave functions are from 'atomic', "
                           "'atomic+random', 'random' or";

@@ -5,6 +5,7 @@
 #include "module_hsolver/diago_cg.h"
 #include "module_lr/utils/lr_util.h"
 #include "module_lr/utils/lr_util_print.h"
+#include "module_parameter/parameter.h"
 
 namespace LR
 {
@@ -116,7 +117,9 @@ namespace LR
                     this->diag_ethr,
                     david_maxiter,
                     false, //always do the subspace diag (check the implementation)
-                    comm_info);
+                    comm_info,
+                    PARAM.inp.diago_dav_method,
+                    PARAM.inp.nb2d);
 
                 auto hpsi_func = [pHamilt](
                     T* psi_in,
