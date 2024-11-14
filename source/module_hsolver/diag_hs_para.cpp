@@ -97,13 +97,10 @@ void Diago_HS_para(
         max_nb = block_size;
     }
     para2d_local.init(lda,lda,max_nb,comm);
-    std::cout << "block size: " << max_nb << " rank" << myrank << std::endl;
-
     std::vector<T> h_local(para2d_local.get_col_size() * para2d_local.get_row_size());
     std::vector<T> s_local(para2d_local.get_col_size() * para2d_local.get_row_size());
     std::vector<T> wfc_2d(para2d_local.get_col_size() * para2d_local.get_row_size());
-    std::cout << "local col size: " << para2d_local.get_col_size() << " local row size: " << para2d_local.get_row_size() << " rank" << myrank << std::endl;
-
+    
     // distribute h and s to 2D
     Cpxgemr2d(lda,lda,h,1,1,para2d_global.desc,h_local.data(),1,1,para2d_local.desc,para2d_local.blacs_ctxt);
     Cpxgemr2d(lda,lda,s,1,1,para2d_global.desc,s_local.data(),1,1,para2d_local.desc,para2d_local.blacs_ctxt);
@@ -119,7 +116,7 @@ void Diago_HS_para(
     }
     else if (diago_dav_method == 2)
     {
-        hsolver::pxxxgvx_diag(para2d_local.desc, para2d_local.get_row_size(), para2d_local.get_col_size(),lda,nband, h_local.data(), s_local.data(), ekb, wfc_2d.data());
+        hsolver::pxxxgvx_diag(para2d_local.desc, para2d_local.get_row_size(), para2d_local.get_col_size(),nband, h_local.data(), s_local.data(), ekb, wfc_2d.data());
     }
     else{
         std::cout << "Error: parallel diagonalization method is not supported. " << "diago_dav_method = " << diago_dav_method << std::endl;

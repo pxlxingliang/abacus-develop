@@ -1,9 +1,11 @@
 #include <complex>
+#include <vector>
 #include "string.h"
-#include "module_base/timer.h"
+#include <iostream>
 
-#include "diago_scalapack.h"
+#include "diago_pxxxgvx.h"
 #include "module_base/scalapack_connector.h"
+#include "module_base/blacs_connector.h"
 
 namespace hsolver
 {
@@ -18,7 +20,7 @@ void pxxxgvx_post_processing(const int info,
                     const int nbands, 
                     int& degeneracy_max)
 {
-    const std::string str_info = "Scalapack diagonalization: \n    info = " + std::string(info) + ".\n";
+    const std::string str_info = "Scalapack diagonalization: \n    info = " + std::to_string(info) + ".\n";
 
     if (info == 0)
     {
@@ -29,9 +31,9 @@ void pxxxgvx_post_processing(const int info,
         const int info_negative = -info;
         const std::string str_index
             = (info_negative > 100)
-                  ? std::string(info_negative / 100) + "-th argument "
-                        + std::string(info_negative % 100) + "-entry is illegal.\n"
-                  : std::string(info_negative) + "-th argument is illegal.\n";
+                  ? std::to_string(info_negative / 100) + "-th argument "
+                        + std::to_string(info_negative % 100) + "-entry is illegal.\n"
+                  : std::to_string(info_negative) + "-th argument is illegal.\n";
         throw std::runtime_error(str_info + str_index);
     }
     else if (info % 2)
@@ -39,7 +41,7 @@ void pxxxgvx_post_processing(const int info,
         std::string str_ifail = "ifail = ";
         for (const int i: ifail)
         {
-            str_ifail += std::string(i) + " ";
+            str_ifail += std::to_string(i) + " ";
         }
         throw std::runtime_error(str_info + str_ifail);
     }
@@ -50,31 +52,31 @@ void pxxxgvx_post_processing(const int info,
         {
             degeneracy_need = std::max(degeneracy_need, iclustr[2 * irank + 1] - iclustr[2 * irank]);
         }
-        const std::string str_need = "degeneracy_need = " + std::string(degeneracy_need) + ".\n";
+        const std::string str_need = "degeneracy_need = " + std::to_string(degeneracy_need) + ".\n";
         const std::string str_saved
-            = "degeneracy_saved = " + std::string(degeneracy_max) + ".\n";
+            = "degeneracy_saved = " + std::to_string(degeneracy_max) + ".\n";
         if (degeneracy_need <= degeneracy_max)
         {
             throw std::runtime_error(str_info + str_need + str_saved);
         }
         else
         {
-            GlobalV::ofs_running << str_need << str_saved;
+            std::cout << str_need << str_saved;
             degeneracy_max = degeneracy_need;
             return;
         }
     }
     else if (info / 4 % 2)
     {
-        const std::string str_M = "M = " + std::string(M) + ".\n";
-        const std::string str_NZ = "NZ = " + std::string(NZ) + ".\n";
+        const std::string str_M = "M = " + std::to_string(M) + ".\n";
+        const std::string str_NZ = "NZ = " + std::to_string(NZ) + ".\n";
         const std::string str_NBANDS
-            = "Number of eigenvalues solved = " + std::string(nbands) + ".\n";
+            = "Number of eigenvalues solved = " + std::to_string(nbands) + ".\n";
         throw std::runtime_error(str_info + str_M + str_NZ + str_NBANDS);
     }
     else if (info / 16 % 2)
     {
-        const std::string str_npos = "Not positive definite = " + std::string(ifail[0]) + ".\n";
+        const std::string str_npos = "Not positive definite = " + std::to_string(ifail[0]) + ".\n";
         throw std::runtime_error(str_info + str_npos);
     }
     else
@@ -86,7 +88,6 @@ void pxxxgvx_post_processing(const int info,
 void pxxxgvx_diag(const int* const desc,
                   const int ncol,
                   const int nrow,
-                  const int ndim_global,
                   const int nbands,
                   const double* const h_mat,
                   const double* const s_mat,
@@ -98,6 +99,7 @@ void pxxxgvx_diag(const int* const desc,
     memcpy(h_tmp.data(), h_mat, sizeof(double) * ncol * nrow);
     memcpy(s_tmp.data(), s_mat, sizeof(double) * ncol * nrow);
 
+    int ndim_global = desc[2];
     int nprow, npcol, myprow, mypcol;
     Cblacs_gridinfo(desc[1], &nprow, &npcol, &myprow, &mypcol);
     int dsize = nprow * npcol;
@@ -149,7 +151,7 @@ void pxxxgvx_diag(const int* const desc,
              &info);
     if (info)
     {
-        throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::string(info) + ".\n");
+        throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::to_string(info) + ".\n");
     }
 
     lwork = work[0];
@@ -204,7 +206,6 @@ void pxxxgvx_diag(const int* const desc,
 void pxxxgvx_diag(const int* const desc,
                   const int ncol,
                   const int nrow,
-                  const int ndim_global,
                   const int nbands,
                   const std::complex<double>* const h_mat,
                   const std::complex<double>* const s_mat,
@@ -224,13 +225,11 @@ void pxxxgvx_diag(const int* const desc,
         memcpy(h_tmp.data(), h_mat, sizeof(std::complex<double>) * ncol * nrow);
         memcpy(s_tmp.data(), s_mat, sizeof(std::complex<double>) * ncol * nrow);
 
+        int ndim_global = desc[2];
         const char jobz = 'V', range = 'I', uplo = 'U';
         const int itype = 1, il = 1, iu = nbands, one = 1;
         int M = 0, NZ = 0, lwork = -1, lrwork = -1, liwork = -1, info = 0;
         const double abstol = 0, orfac = -1;
-        // Note: pzhegvx_ has a bug
-        //       We must give vl,vu a value, although we do not use range 'V'
-        //       We must give rwork at least a memory of sizeof(double) * 3
         const double vl = 0, vu = 0;
         std::vector<std::complex<double>> work(1, 0);
         std::vector<double> rwork(3, 0);
@@ -238,7 +237,6 @@ void pxxxgvx_diag(const int* const desc,
         std::vector<int> ifail(ndim_global, 0);
         std::vector<int> iclustr(2 * dsize);
         std::vector<double> gap(dsize);
-        //std::cout << "dsize: " << dsize << std::endl;
 
         pzhegvx_(&itype,
                  &jobz,
@@ -279,7 +277,7 @@ void pxxxgvx_diag(const int* const desc,
 
         if (info)
         {
-            throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::string(info) + ".\n");
+            throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::to_string(info) + ".\n");
         }
 
         lwork = work[0].real();
@@ -340,7 +338,6 @@ void pxxxgvx_diag(const int* const desc,
 void pxxxgvx_diag(const int *const desc,
                       const int ncol,
                       const int nrow,
-                      const int ndim_global,
                       const int nbands,
                       const float *const h_mat,
                       const float *const s_mat,
@@ -356,6 +353,7 @@ void pxxxgvx_diag(const int *const desc,
     memcpy(h_tmp.data(), h_mat, sizeof(float) * ncol * nrow);
     memcpy(s_tmp.data(), s_mat, sizeof(float) * ncol * nrow);
 
+    int ndim_global = desc[2];
     const char jobz = 'V', range = 'I', uplo = 'U';
     const int itype = 1, il = 1, iu = nbands, one = 1;
     int M = 0, NZ = 0, lwork = -1, liwork = -1, info = 0;
@@ -403,7 +401,7 @@ void pxxxgvx_diag(const int *const desc,
              &info);
     if (info)
     {
-        throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::string(info) + ".\n");
+        throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::to_string(info) + ".\n");
     }
 
     lwork = work[0];
@@ -458,7 +456,6 @@ void pxxxgvx_diag(const int *const desc,
 void pxxxgvx_diag(const int *const desc,
                       const int ncol,
                       const int nrow,
-                      const int ndim_global,
                       const int nbands,
                       const std::complex<float> *const h_mat,
                       const std::complex<float> *const s_mat,
@@ -477,13 +474,11 @@ void pxxxgvx_diag(const int *const desc,
         memcpy(h_tmp.data(), h_mat, sizeof(std::complex<float>) * ncol * nrow);
         memcpy(s_tmp.data(), s_mat, sizeof(std::complex<float>) * ncol * nrow);
 
+        int ndim_global = desc[2];
         const char jobz = 'V', range = 'I', uplo = 'U';
         const int itype = 1, il = 1, iu = nbands, one = 1;
         int M = 0, NZ = 0, lwork = -1, lrwork = -1, liwork = -1, info = 0;
         const float abstol = 0, orfac = -1;
-        // Note: pzhegvx_ has a bug
-        //       We must give vl,vu a value, although we do not use range 'V'
-        //       We must give rwork at least a memory of sizeof(float) * 3
         const float vl = 0, vu = 0;
         std::vector<std::complex<float>> work(1, 0);
         std::vector<float> rwork(3, 0);
@@ -531,7 +526,7 @@ void pxxxgvx_diag(const int *const desc,
 
         if (info)
         {
-            throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::string(info) + ".\n");
+            throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::to_string(info) + ".\n");
         }
 
         lwork = work[0].real();

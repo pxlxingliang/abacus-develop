@@ -7,14 +7,22 @@ namespace hsolver
 
 #ifdef __MPI
 /**
- * @brief Diagonalize a generalized eigenvalue problem using pdsygvx/pzhegvx/pdsygvx/pzhegvx
+ * @brief generalized eigenvalue problem using pdsygvx/pzhegvx/pdsygvx/pzhegvx
  * 
- * @param desc the descriptor of 
+ * @param desc the descriptor of scalapack descriptor
+ * @param ncol the number of columns of the H/S matrix in current processor
+ * @param nrow the number of rows of the H/S matrix in current processor
+ * @param nbands the number of bands to be calculated
+ * @param h_mat the Hamiltonian matrix
+ * @param s_mat the overlap matrix
+ * @param ekb the eigenvalues
+ * @param wfc_2d the eigenvectors
+ * 
+ * @note the matrix is distributed in a 2D block
  */
 void pxxxgvx_diag(const int* const desc,
                   const int ncol,
                   const int nrow,
-                  const int ndim_global,
                   const int nbands,
                   const double* const h_mat,
                   const double* const s_mat,
@@ -24,7 +32,6 @@ void pxxxgvx_diag(const int* const desc,
 void pxxxgvx_diag(const int* const desc,
                       const int ncol,
                       const int nrow,
-                      const int ndim_global,
                       const int nbands,
                       const std::complex<double>* const h_mat,
                       const std::complex<double>* const s_mat,
@@ -34,7 +41,6 @@ void pxxxgvx_diag(const int* const desc,
 void pxxxgvx_diag(const int* const desc,
                       const int ncol,
                       const int nrow,
-                      const int ndim_global,
                       const int nbands,
                       const float* const h_mat,
                       const float* const s_mat,
@@ -44,7 +50,6 @@ void pxxxgvx_diag(const int* const desc,
 void pxxxgvx_diag(const int* const desc,
                         const int ncol,
                         const int nrow,
-                        const int ndim_global,
                         const int nbands,
                         const std::complex<float>* const h_mat,
                         const std::complex<float>* const s_mat,
