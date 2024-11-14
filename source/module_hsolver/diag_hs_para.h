@@ -15,8 +15,8 @@ namespace hsolver
  * @brief Parallel do the generalized eigenvalue problem
  * 
  * @tparam T double or complex<double> or float or complex<float>
- * @param H the hermitian matrix H in H x=lambda S x.
- * @param S the overlap matrix S in H x=lambda S x.
+ * @param H the hermitian matrix H.
+ * @param S the overlap matrix S.
  * @param lda the leading dimension of H and S
  * @param nband the number of bands to be calculated
  * @param ekb to store the eigenvalues.
@@ -25,6 +25,8 @@ namespace hsolver
  * @param diago_dav_method the method to solve the generalized eigenvalue problem
  * 
  * @note 1. h and s should be full matrix in rank 0 of the communicator, and the other ranks is not concerned.
+ * @note 2. wfc is complete in rank 0, and not store in other ranks.
+ * @note 3. diago_dav_method should be 1: by elpa, 2: by scalapack
  */
 template <typename T>
 void Diago_HS_para(

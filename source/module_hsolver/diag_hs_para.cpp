@@ -88,8 +88,8 @@ void Diago_HS_para(
 {
     int myrank;
     MPI_Comm_rank(comm, &myrank);
-    {Parallel_2D para2d_global;
-    {Parallel_2D para2d_local;
+    Parallel_2D para2d_global;
+    Parallel_2D para2d_local;
     para2d_global.init(lda,lda,lda,comm);
     int max_nb = lda / std::max(1,std::max(para2d_global.dim0, para2d_global.dim1));
     if (max_nb > block_size)
@@ -130,13 +130,8 @@ void Diago_HS_para(
     Cpxgemr2d(lda,lda,wfc_2d.data(),1,1,para2d_local.desc,wfc,1,1,para2d_global.desc,para2d_local.blacs_ctxt);
 
     // free the context
-    //Cblacs_gridexit(para2d_local.blacs_ctxt);
-    //Cblacs_gridexit(para2d_global.blacs_ctxt);
-    std::cout << __FILE__ << " " << __LINE__  << " rank" << myrank << std::endl;
-    }
-    std::cout << __FILE__ << " " << __LINE__  << " rank" << myrank << std::endl;
-    }
-    std::cout << __FILE__ << " " << __LINE__  << " rank" << myrank << std::endl;
+    Cblacs_gridexit(para2d_local.blacs_ctxt);
+    Cblacs_gridexit(para2d_global.blacs_ctxt);
 }
 
 // template instantiation

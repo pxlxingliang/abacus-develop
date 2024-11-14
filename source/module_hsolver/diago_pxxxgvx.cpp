@@ -9,7 +9,8 @@ namespace hsolver
 {
 
 #ifdef __MPI
-void post_processing(const int info, 
+// post processing for pdsygvx/pzhegvx/pdsygvx/pzhegvx
+void pxxxgvx_post_processing(const int info, 
                     const std::vector<int>& ifail,
                     const std::vector<int>& iclustr,
                     const int M,
@@ -17,10 +18,7 @@ void post_processing(const int info,
                     const int nbands, 
                     int& degeneracy_max)
 {
-    const std::string str_info = "info = " + ModuleBase::GlobalFunc::TO_STRING(info) + ".\n";
-    const std::string str_FILE
-        = ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line " + ModuleBase::GlobalFunc::TO_STRING(__LINE__) + ".\n";
-    const std::string str_info_FILE = str_info + str_FILE;
+    const std::string str_info = "Scalapack diagonalization: \n    info = " + std::string(info) + ".\n";
 
     if (info == 0)
     {
@@ -31,19 +29,19 @@ void post_processing(const int info,
         const int info_negative = -info;
         const std::string str_index
             = (info_negative > 100)
-                  ? ModuleBase::GlobalFunc::TO_STRING(info_negative / 100) + "-th argument "
-                        + ModuleBase::GlobalFunc::TO_STRING(info_negative % 100) + "-entry is illegal.\n"
-                  : ModuleBase::GlobalFunc::TO_STRING(info_negative) + "-th argument is illegal.\n";
-        throw std::runtime_error(str_info_FILE + str_index);
+                  ? std::string(info_negative / 100) + "-th argument "
+                        + std::string(info_negative % 100) + "-entry is illegal.\n"
+                  : std::string(info_negative) + "-th argument is illegal.\n";
+        throw std::runtime_error(str_info + str_index);
     }
     else if (info % 2)
     {
         std::string str_ifail = "ifail = ";
         for (const int i: ifail)
         {
-            str_ifail += ModuleBase::GlobalFunc::TO_STRING(i) + " ";
+            str_ifail += std::string(i) + " ";
         }
-        throw std::runtime_error(str_info_FILE + str_ifail);
+        throw std::runtime_error(str_info + str_ifail);
     }
     else if (info / 2 % 2)
     {
@@ -52,12 +50,12 @@ void post_processing(const int info,
         {
             degeneracy_need = std::max(degeneracy_need, iclustr[2 * irank + 1] - iclustr[2 * irank]);
         }
-        const std::string str_need = "degeneracy_need = " + ModuleBase::GlobalFunc::TO_STRING(degeneracy_need) + ".\n";
+        const std::string str_need = "degeneracy_need = " + std::string(degeneracy_need) + ".\n";
         const std::string str_saved
-            = "degeneracy_saved = " + ModuleBase::GlobalFunc::TO_STRING(degeneracy_max) + ".\n";
+            = "degeneracy_saved = " + std::string(degeneracy_max) + ".\n";
         if (degeneracy_need <= degeneracy_max)
         {
-            throw std::runtime_error(str_info_FILE + str_need + str_saved);
+            throw std::runtime_error(str_info + str_need + str_saved);
         }
         else
         {
@@ -68,20 +66,20 @@ void post_processing(const int info,
     }
     else if (info / 4 % 2)
     {
-        const std::string str_M = "M = " + ModuleBase::GlobalFunc::TO_STRING(M) + ".\n";
-        const std::string str_NZ = "NZ = " + ModuleBase::GlobalFunc::TO_STRING(NZ) + ".\n";
+        const std::string str_M = "M = " + std::string(M) + ".\n";
+        const std::string str_NZ = "NZ = " + std::string(NZ) + ".\n";
         const std::string str_NBANDS
-            = "NBANDS = " + ModuleBase::GlobalFunc::TO_STRING(nbands) + ".\n";
-        throw std::runtime_error(str_info_FILE + str_M + str_NZ + str_NBANDS);
+            = "Number of eigenvalues solved = " + std::string(nbands) + ".\n";
+        throw std::runtime_error(str_info + str_M + str_NZ + str_NBANDS);
     }
     else if (info / 16 % 2)
     {
-        const std::string str_npos = "not positive definite = " + ModuleBase::GlobalFunc::TO_STRING(ifail[0]) + ".\n";
-        throw std::runtime_error(str_info_FILE + str_npos);
+        const std::string str_npos = "Not positive definite = " + std::string(ifail[0]) + ".\n";
+        throw std::runtime_error(str_info + str_npos);
     }
     else
     {
-        throw std::runtime_error(str_info_FILE);
+        throw std::runtime_error(str_info);
     }
 }
 
@@ -95,10 +93,14 @@ void pxxxgvx_diag(const int* const desc,
                   double* const ekb,
                   double* const wfc_2d)
 {
-    ModuleBase::matrix h_tmp(ncol, nrow, false);
-    memcpy(h_tmp.c, h_mat, sizeof(double) * ncol * nrow);
-    ModuleBase::matrix s_tmp(ncol, nrow, false);
-    memcpy(s_tmp.c, s_mat, sizeof(double) * ncol * nrow);
+    std::vector<double> h_tmp(ncol * nrow);
+    std::vector<double> s_tmp(ncol * nrow);
+    memcpy(h_tmp.data(), h_mat, sizeof(double) * ncol * nrow);
+    memcpy(s_tmp.data(), s_mat, sizeof(double) * ncol * nrow);
+
+    int nprow, npcol, myprow, mypcol;
+    Cblacs_gridinfo(desc[1], &nprow, &npcol, &myprow, &mypcol);
+    int dsize = nprow * npcol;
 
     const char jobz = 'V', range = 'I', uplo = 'U';
     const int itype = 1, il = 1, iu = nbands, one = 1;
@@ -108,19 +110,19 @@ void pxxxgvx_diag(const int* const desc,
     std::vector<double> work(3, 0);
     std::vector<int> iwork(1, 0);
     std::vector<int> ifail(ndim_global, 0);
-    std::vector<int> iclustr(2 * GlobalV::DSIZE);
-    std::vector<double> gap(GlobalV::DSIZE);
+    std::vector<int> iclustr(2 * dsize);
+    std::vector<double> gap(dsize);
 
     pdsygvx_(&itype,
              &jobz,
              &range,
              &uplo,
              &ndim_global,
-             h_tmp.c,
+             h_tmp.data(),
              &one,
              &one,
              desc,
-             s_tmp.c,
+             s_tmp.data(),
              &one,
              &one,
              desc,
@@ -147,9 +149,7 @@ void pxxxgvx_diag(const int* const desc,
              &info);
     if (info)
     {
-        throw std::runtime_error("info = " + ModuleBase::GlobalFunc::TO_STRING(info) + ".\n"
-                                 + ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line "
-                                 + ModuleBase::GlobalFunc::TO_STRING(__LINE__));
+        throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::string(info) + ".\n");
     }
 
     lwork = work[0];
@@ -162,11 +162,11 @@ void pxxxgvx_diag(const int* const desc,
              &range,
              &uplo,
              &ndim_global,
-             h_tmp.c,
+             h_tmp.data(),
              &one,
              &one,
              desc,
-             s_tmp.c,
+             s_tmp.data(),
              &one,
              &one,
              desc,
@@ -198,7 +198,7 @@ void pxxxgvx_diag(const int* const desc,
         return ;
     }
     int degeneracy_max = 12;
-    post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
+    pxxxgvx_post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
 }
 
 void pxxxgvx_diag(const int* const desc,
@@ -212,13 +212,17 @@ void pxxxgvx_diag(const int* const desc,
                   std::complex<double>* const wfc_2d)
 {
     int degeneracy_max = 12;
+
+    int nprow, npcol, myprow, mypcol;
+    Cblacs_gridinfo(desc[1], &nprow, &npcol, &myprow, &mypcol);
+    int dsize = nprow * npcol;
+
     while (true)
     {
-        ModuleBase::ComplexMatrix h_tmp(ncol, nrow, false);
-        memcpy(h_tmp.c, h_mat, sizeof(std::complex<double>) * ncol * nrow);
-        ModuleBase::ComplexMatrix s_tmp(ncol, nrow, false);
-        memcpy(s_tmp.c, s_mat, sizeof(std::complex<double>) * ncol * nrow);
-
+        std::vector<std::complex<double>> h_tmp(ncol * nrow);
+        std::vector<std::complex<double>> s_tmp(ncol * nrow);
+        memcpy(h_tmp.data(), h_mat, sizeof(std::complex<double>) * ncol * nrow);
+        memcpy(s_tmp.data(), s_mat, sizeof(std::complex<double>) * ncol * nrow);
 
         const char jobz = 'V', range = 'I', uplo = 'U';
         const int itype = 1, il = 1, iu = nbands, one = 1;
@@ -232,20 +236,20 @@ void pxxxgvx_diag(const int* const desc,
         std::vector<double> rwork(3, 0);
         std::vector<int> iwork(1, 0);
         std::vector<int> ifail(ndim_global, 0);
-        std::vector<int> iclustr(2 * GlobalV::DSIZE);
-        std::vector<double> gap(GlobalV::DSIZE);
-        //std::cout << "GlobalV::DSIZE: " << GlobalV::DSIZE << std::endl;
+        std::vector<int> iclustr(2 * dsize);
+        std::vector<double> gap(dsize);
+        //std::cout << "dsize: " << dsize << std::endl;
 
         pzhegvx_(&itype,
                  &jobz,
                  &range,
                  &uplo,
                  &ndim_global,
-                 h_tmp.c,
+                 h_tmp.data(),
                  &one,
                  &one,
                  desc,
-                 s_tmp.c,
+                 s_tmp.data(),
                  &one,
                  &one,
                  desc,
@@ -275,9 +279,7 @@ void pxxxgvx_diag(const int* const desc,
 
         if (info)
         {
-            throw std::runtime_error("info=" + ModuleBase::GlobalFunc::TO_STRING(info) + ". "
-                                     + ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line "
-                                     + ModuleBase::GlobalFunc::TO_STRING(__LINE__));
+            throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::string(info) + ".\n");
         }
 
         lwork = work[0].real();
@@ -294,11 +296,11 @@ void pxxxgvx_diag(const int* const desc,
                  &range,
                  &uplo,
                  &ndim_global,
-                 h_tmp.c,
+                 h_tmp.data(),
                  &one,
                  &one,
                  desc,
-                 s_tmp.c,
+                 s_tmp.data(),
                  &one,
                  &one,
                  desc,
@@ -330,7 +332,7 @@ void pxxxgvx_diag(const int* const desc,
         {
             return;
         }
-        post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
+        pxxxgvx_post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
     }
 }
 
@@ -345,6 +347,10 @@ void pxxxgvx_diag(const int *const desc,
                       float *const ekb,
                       float *const wfc_2d)
 {
+    int nprow, npcol, myprow, mypcol;
+    Cblacs_gridinfo(desc[1], &nprow, &npcol, &myprow, &mypcol);
+    int dsize = nprow * npcol;
+
     std::vector<float> h_tmp(ncol * nrow);
     std::vector<float> s_tmp(ncol * nrow);
     memcpy(h_tmp.data(), h_mat, sizeof(float) * ncol * nrow);
@@ -358,8 +364,8 @@ void pxxxgvx_diag(const int *const desc,
     std::vector<float> work(3, 0);
     std::vector<int> iwork(1, 0);
     std::vector<int> ifail(ndim_global, 0);
-    std::vector<int> iclustr(2 * GlobalV::DSIZE);
-    std::vector<float> gap(GlobalV::DSIZE);
+    std::vector<int> iclustr(2 * dsize);
+    std::vector<float> gap(dsize);
 
     pssygvx_(&itype,
              &jobz,
@@ -397,9 +403,7 @@ void pxxxgvx_diag(const int *const desc,
              &info);
     if (info)
     {
-        throw std::runtime_error("info = " + ModuleBase::GlobalFunc::TO_STRING(info) + ".\n"
-                                 + ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line "
-                                 + ModuleBase::GlobalFunc::TO_STRING(__LINE__));
+        throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::string(info) + ".\n");
     }
 
     lwork = work[0];
@@ -448,7 +452,7 @@ void pxxxgvx_diag(const int *const desc,
         return ;
     }
     int degeneracy_max = 12;
-    post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
+    pxxxgvx_post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
 }    
 
 void pxxxgvx_diag(const int *const desc,
@@ -461,6 +465,10 @@ void pxxxgvx_diag(const int *const desc,
                       float *const ekb,
                       std::complex<float> *const wfc_2d)
 {
+    int nprow, npcol, myprow, mypcol;
+    Cblacs_gridinfo(desc[1], &nprow, &npcol, &myprow, &mypcol);
+    int dsize = nprow * npcol;
+
     int degeneracy_max = 12;
     while (true)
     {
@@ -481,8 +489,8 @@ void pxxxgvx_diag(const int *const desc,
         std::vector<float> rwork(3, 0);
         std::vector<int> iwork(1, 0);
         std::vector<int> ifail(ndim_global, 0);
-        std::vector<int> iclustr(2 * GlobalV::DSIZE);
-        std::vector<float> gap(GlobalV::DSIZE);
+        std::vector<int> iclustr(2 * dsize);
+        std::vector<float> gap(dsize);
 
         pchegvx_(&itype,
                  &jobz,
@@ -523,9 +531,7 @@ void pxxxgvx_diag(const int *const desc,
 
         if (info)
         {
-            throw std::runtime_error("info=" + ModuleBase::GlobalFunc::TO_STRING(info) + ". "
-                                     + ModuleBase::GlobalFunc::TO_STRING(__FILE__) + " line "
-                                     + ModuleBase::GlobalFunc::TO_STRING(__LINE__));
+            throw std::runtime_error("Scalapack diagonalization: \n    info = " + std::string(info) + ".\n");
         }
 
         lwork = work[0].real();
@@ -578,12 +584,9 @@ void pxxxgvx_diag(const int *const desc,
         {
             return;
         }
-        post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
+        pxxxgvx_post_processing(info, ifail,iclustr, M,NZ,nbands,degeneracy_max);
     }
 }
-
-
-
 
 
 #endif
