@@ -177,7 +177,7 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
     }
 
     int nsample = 10;
-    int nloop = 100;
+    int nloop = 10;
     // store all the times in a vector
     std::vector<double> time_elpa(nsample, 0);
     std::vector<double> time_scalap(nsample, 0);
@@ -190,8 +190,6 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
         if (my_rank == 0) {
             std::cout << randomi << " ";
             generate_random_hs(lda, randomi, h_mat, s_mat);
-            std::cout << "H0, H1, H2, H3, H4:" << h_mat[0] << " " << h_mat[1] << " " << h_mat[2] << " " << h_mat[3] << " " << h_mat[4] << std::endl;
-            std::cout << "S0, S1, S2, S3, S4:" << s_mat[0] << " " << s_mat[1] << " " << s_mat[2] << " " << s_mat[3] << " " << s_mat[4] << std::endl;
         }
 
         // ELPA
@@ -200,11 +198,12 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
         //std::cout << "ELPA ";
         for (int j=0;j<nloop;j++)
         {
-            auto start1 = std::chrono::high_resolution_clock::now();
+            //auto start1 = std::chrono::high_resolution_clock::now();
             hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_elpa.data(), wfc.data(), comm, nb, 1);
-            auto start2 = std::chrono::high_resolution_clock::now();
             MPI_Barrier(comm);
-            if (my_rank == 0) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(start2 - start1).count() << " ";
+            //auto start2 = std::chrono::high_resolution_clock::now();
+            //MPI_Barrier(comm);
+            //if (my_rank == 0) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(start2 - start1).count() << " ";
         }
         //std::cout << std::endl;
         MPI_Barrier(comm);
@@ -217,6 +216,7 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
         for (int j=0;j<nloop;j++)
         {
             hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_scalap.data(), wfc.data(), comm, nb, 2);
+            MPI_Barrier(comm);
         }
         MPI_Barrier(comm);
         end = std::chrono::high_resolution_clock::now();
@@ -229,7 +229,7 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
             start = std::chrono::high_resolution_clock::now();
             base_device::DEVICE_CPU* ctx = {};
 
-            for (int j=0;j<100;j++)
+            for (int j=0;j<nloop;j++)
             {
                 h_tmp = h_mat;
                 s_tmp = s_mat;
@@ -257,7 +257,8 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
                     std::cout << "eigenvalue " << i << " by Lapack: " << ekb_lapack[i] << std::endl;
                 }
             }
-        }   
+        }
+        MPI_Barrier(comm);   
 
     }
 
@@ -277,6 +278,24 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
         for (int i=0; i < nsample;i++)
         {std::cout << time_lapack[i] << " ";}
         std::cout << std::endl;
+
+        // print out the average time and speedup
+        double avg_time_elpa = 0;
+        double avg_time_scalap = 0;
+        double avg_time_lapack = 0;
+        for (int i=0; i < nsample;i++)
+        {
+            avg_time_elpa += time_elpa[i];
+            avg_time_scalap += time_scalap[i];
+            avg_time_lapack += time_lapack[i];
+        }
+
+        avg_time_elpa /= nsample;
+        avg_time_scalap /= nsample;
+        avg_time_lapack /= nsample;
+        std::cout << "Average Lapack Time   : " << avg_time_lapack << " ms" << std::endl;
+        std::cout << "Average ELPA Time     : " << avg_time_elpa << " ms, Speedup: " << avg_time_lapack / avg_time_elpa << std::endl;
+        std::cout << "Average Scalapack Time: " << avg_time_scalap << " ms, Speedup: " << avg_time_lapack / avg_time_scalap << std::endl;
     }
 
     
@@ -308,10 +327,15 @@ TEST(DiagoPxxxgvxScalapackTest, ComplexFloat) {
 }
 
 TEST(DiagoPxxxgvxPerformanceTest, Double) {
-    test_performance<std::complex<double>>(64, 4, 50, MPI_COMM_WORLD);
-    test_performance<std::complex<double>>(128, 4, 100, MPI_COMM_WORLD);
-    test_performance<std::complex<double>>(128, 8, 100, MPI_COMM_WORLD);
-    test_performance<std::complex<double>>(128, 16, 100, MPI_COMM_WORLD);
+    int ndim = 400;
+    int nband = 320;
+    test_performance<std::complex<double>>(ndim, 1,  nband, MPI_COMM_WORLD);
+    test_performance<std::complex<double>>(ndim, 4,  nband, MPI_COMM_WORLD);
+    test_performance<std::complex<double>>(ndim, 16, nband, MPI_COMM_WORLD);
+    test_performance<std::complex<double>>(ndim, 20, nband, MPI_COMM_WORLD);
+    test_performance<std::complex<double>>(ndim, 32, nband, MPI_COMM_WORLD);
+    test_performance<std::complex<double>>(ndim, 50, nband, MPI_COMM_WORLD);
+    test_performance<std::complex<double>>(ndim, 64, nband, MPI_COMM_WORLD);
 }
 
 int main(int argc, char** argv) {
