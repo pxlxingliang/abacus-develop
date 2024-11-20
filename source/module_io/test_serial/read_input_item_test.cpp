@@ -79,6 +79,12 @@ TEST_F(InputTest, Item_test)
         EXPECT_EXIT(it->second.check_value(it->second, param), ::testing::ExitedWithCode(0), "");
         output = testing::internal::GetCapturedStdout();
         EXPECT_THAT(output, testing::HasSubstr("NOTICE"));
+
+        param.input.esolver_type = "lr";
+        param.input.calculation = "scf";
+        it = find_label("esolver_type", readinput.input_lists);
+        it->second.reset_value(it->second, param);
+        EXPECT_EQ(param.input.calculation, "nscf");
     }
     { // nspin
         auto it = find_label("nspin", readinput.input_lists);
@@ -149,6 +155,11 @@ TEST_F(InputTest, Item_test)
         EXPECT_EQ(param.input.symmetry, "0");
 
         param.input.qo_switch = true;
+        it->second.reset_value(it->second, param);
+        EXPECT_EQ(param.input.symmetry, "-1");
+
+        param.input.symmetry = "default";
+        param.input.berry_phase = true;
         it->second.reset_value(it->second, param);
         EXPECT_EQ(param.input.symmetry, "-1");
     }
@@ -820,6 +831,14 @@ TEST_F(InputTest, Item_test)
         ifs.close();
         EXPECT_EQ(line, "K_POINTS");
 
+        param.input.basis_type = "lcao";
+        param.input.gamma_only = true;
+        param.input.nspin = 4;
+        testing::internal::CaptureStdout();
+        EXPECT_EXIT(it->second.reset_value(it->second, param), ::testing::ExitedWithCode(0), "");
+        output = testing::internal::GetCapturedStdout();
+        EXPECT_THAT(output, testing::HasSubstr("NOTICE"));
+
     }
     { // out_mat_r
         auto it = find_label("out_mat_r", readinput.input_lists);
@@ -910,6 +929,14 @@ TEST_F(InputTest, Item_test2)
         auto it = find_label("dm_to_rho", readinput.input_lists);
         param.input.dm_to_rho = true;
         GlobalV::NPROC = 2;
+        testing::internal::CaptureStdout();
+        EXPECT_EXIT(it->second.check_value(it->second, param), ::testing::ExitedWithCode(0), "");
+        output = testing::internal::GetCapturedStdout();
+        EXPECT_THAT(output, testing::HasSubstr("NOTICE"));
+
+        param.input.dm_to_rho = true;
+        param.input.gamma_only = true;
+        GlobalV::NPROC = 1;
         testing::internal::CaptureStdout();
         EXPECT_EXIT(it->second.check_value(it->second, param), ::testing::ExitedWithCode(0), "");
         output = testing::internal::GetCapturedStdout();
@@ -1036,46 +1063,54 @@ TEST_F(InputTest, Item_test2)
         it->second.reset_value(it->second, param);
         EXPECT_EQ(param.input.vdw_s6, "0.75");
 
+        // dftd3 parameter will not get its value here
         param.input.vdw_s6 = "default";
         param.input.vdw_method = "d3_0";
         it->second.reset_value(it->second, param);
-        EXPECT_EQ(param.input.vdw_s6, "1.0");
+        // EXPECT_EQ(param.input.vdw_s6, "1.0");
+        EXPECT_EQ(param.input.vdw_s6, "default");
     }
     { // vdw_s8
         auto it = find_label("vdw_s8", readinput.input_lists);
         param.input.vdw_s8 = "default";
         param.input.vdw_method = "d3_0";
         it->second.reset_value(it->second, param);
-        EXPECT_EQ(param.input.vdw_s8, "0.722");
+        // EXPECT_EQ(param.input.vdw_s8, "0.722");
+        EXPECT_EQ(param.input.vdw_s8, "default");
 
         param.input.vdw_s8 = "default";
         param.input.vdw_method = "d3_bj";
         it->second.reset_value(it->second, param);
-        EXPECT_EQ(param.input.vdw_s8, "0.7875");
+        // EXPECT_EQ(param.input.vdw_s8, "0.7875");
+        EXPECT_EQ(param.input.vdw_s8, "default");
     }
     { // vdw_a1
         auto it = find_label("vdw_a1", readinput.input_lists);
         param.input.vdw_a1 = "default";
         param.input.vdw_method = "d3_0";
         it->second.reset_value(it->second, param);
-        EXPECT_EQ(param.input.vdw_a1, "1.217");
+        // EXPECT_EQ(param.input.vdw_a1, "1.217");
+        EXPECT_EQ(param.input.vdw_a1, "default");
 
         param.input.vdw_a1 = "default";
         param.input.vdw_method = "d3_bj";
         it->second.reset_value(it->second, param);
-        EXPECT_EQ(param.input.vdw_a1, "0.4289");
+        // EXPECT_EQ(param.input.vdw_a1, "0.4289");
+        EXPECT_EQ(param.input.vdw_a1, "default");
     }
     { // vdw_a2
         auto it = find_label("vdw_a2", readinput.input_lists);
         param.input.vdw_a2 = "default";
         param.input.vdw_method = "d3_0";
         it->second.reset_value(it->second, param);
-        EXPECT_EQ(param.input.vdw_a2, "1.0");
+        // EXPECT_EQ(param.input.vdw_a2, "1.0");
+        EXPECT_EQ(param.input.vdw_a2, "default");
 
         param.input.vdw_a2 = "default";
         param.input.vdw_method = "d3_bj";
         it->second.reset_value(it->second, param);
-        EXPECT_EQ(param.input.vdw_a2, "4.4407");
+        // EXPECT_EQ(param.input.vdw_a2, "4.4407");
+        EXPECT_EQ(param.input.vdw_a2, "default");
     }
     { // vdw_c6_unit
         auto it = find_label("vdw_c6_unit", readinput.input_lists);

@@ -62,8 +62,7 @@ namespace LR_Util
     template<>
     void matsym<double>(const double* in, const int n, const Parallel_2D& pmat, double* out)
     {
-        for (int i = 0;i < pmat.get_local_size();++i) {out[i] = in[i];
-}
+        for (int i = 0;i < pmat.get_local_size();++i) { out[i] = in[i]; }
         const double alpha = 0.5, beta = 0.5;
         const int i1 = 1;
         pdtran_(&n, &n, &alpha, in, &i1, &i1, pmat.desc, &beta, out, &i1, &i1, pmat.desc);
@@ -71,9 +70,8 @@ namespace LR_Util
     template<>
     void matsym<double>(double* inout, const int n, const Parallel_2D& pmat)
     {
-        std::vector<double> tmp(n * n);
-        for (int i = 0;i < pmat.get_local_size();++i) {tmp[i] = inout[i];
-}
+        std::vector<double> tmp(pmat.get_local_size());
+        std::copy(inout, inout + pmat.get_local_size(), tmp.begin());
         const double alpha = 0.5, beta = 0.5;
         const int i1 = 1;
         pdtran_(&n, &n, &alpha, tmp.data(), &i1, &i1, pmat.desc, &beta, inout, &i1, &i1, pmat.desc);
@@ -81,8 +79,7 @@ namespace LR_Util
     template<>
     void matsym<std::complex<double>>(const std::complex<double>* in, const int n, const Parallel_2D& pmat, std::complex<double>* out)
     {
-        for (int i = 0;i < pmat.get_local_size();++i) {out[i] = in[i];
-}
+        for (int i = 0;i < pmat.get_local_size();++i) { out[i] = in[i]; }
         const std::complex<double> alpha(0.5, 0.0), beta(0.5, 0.0);
         const int i1 = 1;
         pztranc_(&n, &n, &alpha, in, &i1, &i1, pmat.desc, &beta, out, &i1, &i1, pmat.desc);
@@ -90,9 +87,8 @@ namespace LR_Util
     template<>
     void matsym<std::complex<double>>(std::complex<double>* inout, const int n, const Parallel_2D& pmat)
     {
-        std::vector<std::complex<double>> tmp(n * n);
-        for (int i = 0;i < pmat.get_local_size();++i) {tmp[i] = inout[i];
-}
+        std::vector<std::complex<double>> tmp(pmat.get_local_size());
+        std::copy(inout, inout + pmat.get_local_size(), tmp.begin());
         const std::complex<double> alpha(0.5, 0.0), beta(0.5, 0.0);
         const int i1 = 1;
         pztranc_(&n, &n, &alpha, tmp.data(), &i1, &i1, pmat.desc, &beta, inout, &i1, &i1, pmat.desc);
@@ -212,7 +208,7 @@ namespace LR_Util
         int info = 0;
         char jobz = 'V', uplo = 'U';
         double work_tmp;
-        constexpr int minus_one = -1;
+        const int minus_one = -1;
         dsyev_(&jobz, &uplo, &n, mat, &n, eig, &work_tmp, &minus_one, &info);		// get best lwork
         const int lwork = work_tmp;
         double* work2 = new double[lwork];
@@ -241,7 +237,7 @@ namespace LR_Util
         int info = 0;
         char jobvl = 'N', jobvr = 'V';  //calculate right eigenvectors
         double work_tmp;
-        constexpr int minus_one = -1;
+        const int minus_one = -1;
         std::vector<double> eig_real(n);
         std::vector<double> eig_imag(n);
         const int ldvl = 1, ldvr = n;

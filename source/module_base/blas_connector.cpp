@@ -1,5 +1,10 @@
 #include "blas_connector.h"
 
+#ifdef __DSP
+#include "module_base/kernels/dsp/dsp_connector.h"
+#include "module_base/global_variable.h"
+#endif
+
 void BlasConnector::axpy( const int n, const float alpha, const float *X, const int incX, float *Y, const int incY, base_device::AbacusDevice_t device_type)
 {
 	if (device_type == base_device::AbacusDevice_t::CpuDevice) {
@@ -64,14 +69,16 @@ float BlasConnector::dot( const int n, const float *X, const int incX, const flo
 {
 	if (device_type == base_device::AbacusDevice_t::CpuDevice) {
 		return sdot_(&n, X, &incX, Y, &incY);
-}
+	}
+	return sdot_(&n, X, &incX, Y, &incY);
 }
 
 double BlasConnector::dot( const int n, const double *X, const int incX, const double *Y, const int incY, base_device::AbacusDevice_t device_type)
 {
 	if (device_type == base_device::AbacusDevice_t::CpuDevice) {
 		return ddot_(&n, X, &incX, Y, &incY);
-}
+	}
+	return ddot_(&n, X, &incX, Y, &incY);
 }
 
 // C = a * A.? * B.? + b * C
@@ -83,7 +90,14 @@ void BlasConnector::gemm(const char transa, const char transb, const int m, cons
 		sgemm_(&transb, &transa, &n, &m, &k,
 		&alpha, b, &ldb, a, &lda,
 		&beta, c, &ldc);
-}
+	}
+	#ifdef __DSP
+	else if (device_type == base_device::AbacusDevice_t::DspDevice){
+		sgemm_mth_(&transb, &transa, &n, &m, &k,
+		&alpha, b, &ldb, a, &lda,
+		&beta, c, &ldc, GlobalV::MY_RANK);
+	}
+	#endif
 }
 
 void BlasConnector::gemm(const char transa, const char transb, const int m, const int n, const int k,
@@ -94,7 +108,14 @@ void BlasConnector::gemm(const char transa, const char transb, const int m, cons
 		dgemm_(&transb, &transa, &n, &m, &k,
 		&alpha, b, &ldb, a, &lda,
 		&beta, c, &ldc);
-}
+	}
+	#ifdef __DSP
+	else if (device_type == base_device::AbacusDevice_t::DspDevice){
+		dgemm_mth_(&transb, &transa, &n, &m, &k,
+		&alpha, b, &ldb, a, &lda,
+		&beta, c, &ldc, GlobalV::MY_RANK);
+	}
+	#endif
 }
 
 void BlasConnector::gemm(const char transa, const char transb, const int m, const int n, const int k,
@@ -105,7 +126,14 @@ void BlasConnector::gemm(const char transa, const char transb, const int m, cons
     	cgemm_(&transb, &transa, &n, &m, &k,
         &alpha, b, &ldb, a, &lda,
         &beta, c, &ldc);
-}
+	}
+	#ifdef __DSP
+	else if (device_type == base_device::AbacusDevice_t::DspDevice) {
+    	cgemm_mth_(&transb, &transa, &n, &m, &k,
+        &alpha, b, &ldb, a, &lda,
+        &beta, c, &ldc, GlobalV::MY_RANK);
+	}
+	#endif
 }
 
 void BlasConnector::gemm(const char transa, const char transb, const int m, const int n, const int k,
@@ -116,6 +144,22 @@ void BlasConnector::gemm(const char transa, const char transb, const int m, cons
 		zgemm_(&transb, &transa, &n, &m, &k,
 		&alpha, b, &ldb, a, &lda,
 		&beta, c, &ldc);
+	}
+	#ifdef __DSP
+	else if (device_type == base_device::AbacusDevice_t::DspDevice) {
+    	zgemm_mth_(&transb, &transa, &n, &m, &k,
+        &alpha, b, &ldb, a, &lda,
+        &beta, c, &ldc, GlobalV::MY_RANK);
+	}
+	#endif
+}
+
+void BlasConnector::gemv(const char trans, const int m, const int n,
+    const float alpha, const float* A, const int lda, const float* X, const int incx,
+    const float beta, float* Y, const int incy, base_device::AbacusDevice_t device_type)
+{
+	if (device_type == base_device::AbacusDevice_t::CpuDevice) {
+    	sgemv_(&trans, &m, &n, &alpha, A, &lda, X, &incx, &beta, Y, &incy);
 }
 }
 
@@ -152,7 +196,8 @@ float BlasConnector::nrm2( const int n, const float *X, const int incX, base_dev
 {
 	if (device_type == base_device::AbacusDevice_t::CpuDevice) {
 		return snrm2_( &n, X, &incX );
-}
+	}
+	return snrm2_( &n, X, &incX );
 }
 
 
@@ -160,7 +205,8 @@ double BlasConnector::nrm2( const int n, const double *X, const int incX, base_d
 {
 	if (device_type == base_device::AbacusDevice_t::CpuDevice) {
 		return dnrm2_( &n, X, &incX );
-}
+	}
+	return dnrm2_( &n, X, &incX );
 }
 
 
@@ -168,7 +214,8 @@ double BlasConnector::nrm2( const int n, const std::complex<double> *X, const in
 {
 	if (device_type == base_device::AbacusDevice_t::CpuDevice) {
 		return dznrm2_( &n, X, &incX );
-}
+	}
+	return dznrm2_( &n, X, &incX );
 }
 
 // copies a into b
@@ -176,12 +223,12 @@ void BlasConnector::copy(const long n, const double *a, const int incx, double *
 {
 	if (device_type == base_device::AbacusDevice_t::CpuDevice) {
 		dcopy_(&n, a, &incx, b, &incy);
-}
+	}
 }
 
 void BlasConnector::copy(const long n, const std::complex<double> *a, const int incx, std::complex<double> *b, const int incy, base_device::AbacusDevice_t device_type)
 {
 	if (device_type == base_device::AbacusDevice_t::CpuDevice) {
 		zcopy_(&n, a, &incx, b, &incy);
-}
+	}
 }

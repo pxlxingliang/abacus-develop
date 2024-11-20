@@ -34,7 +34,6 @@
 #include "module_io/berryphase.h"
 #include "module_io/numerical_basis.h"
 #include "module_io/numerical_descriptor.h"
-#include "module_io/rho_io.h"
 #include "module_io/to_wannier90_pw.h"
 #include "module_io/winput.h"
 #include "module_io/write_elecstat_pot.h"
@@ -68,10 +67,7 @@ void ESolver_KS_PW<T, Device>::others(const int istep) {
                              PARAM.inp.bessel_descriptor_rcut,
                              PARAM.inp.bessel_descriptor_tolerence,
                              this->kv.get_nks());
-        ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running,
-                                     "GENERATE DESCRIPTOR FOR DEEPKS");
-    } else if (cal_type == "nscf") {
-        this->nscf();
+        ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "GENERATE DESCRIPTOR FOR DEEPKS");
     } else {
         ModuleBase::WARNING_QUIT("ESolver_KS_PW::others",
                                  "CALCULATION type not supported");
