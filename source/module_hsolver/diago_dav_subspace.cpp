@@ -24,11 +24,11 @@ Diago_DavSubspace<T, Device>::Diago_DavSubspace(const std::vector<Real>& precond
                                                 const int& diag_nmax_in,
                                                 const bool& need_subspace_in,
                                                 const diag_comm_info& diag_comm_in,
-                                                const int diago_dav_method_in,
-                                                const int block_size_in)
+                                                const int diag_subspace_method_in,
+                                                const int diago_subspace_bs_in)
     : precondition(precondition_in), n_band(nband_in), dim(nbasis_in), nbase_x(nband_in * david_ndim_in),
       diag_thr(diag_thr_in), iter_nmax(diag_nmax_in), is_subspace(need_subspace_in), diag_comm(diag_comm_in),
-        diago_dav_method(diago_dav_method_in), block_size(block_size_in)
+        diag_subspace_method(diag_subspace_method_in), diago_subspace_bs(diago_subspace_bs_in)
 {
     this->device = base_device::get_device_type<Device>(this->ctx);
 
@@ -38,11 +38,7 @@ Diago_DavSubspace<T, Device>::Diago_DavSubspace(const std::vector<Real>& precond
 
     assert(david_ndim_in > 1);
     assert(david_ndim_in * nband_in < nbasis_in * this->diag_comm.nproc);
-    assert(diago_dav_method >= 0 && diago_dav_method < 3);
-    if (block_size <= 0)
-    {
-        block_size = 32; // This is a magic number
-    }
+    assert(diag_subspace_method >= 0 && diag_subspace_method < 3);
 
     // TODO: Added memory usage statistics
 
@@ -537,10 +533,7 @@ void Diago_DavSubspace<T, Device>::diag_zhegvx(const int& nbase,
                                                T* vcc)
 {
     ModuleBase::timer::tick("Diago_DavSubspace", "diag_zhegvx");
-    if (this->diag_comm.rank == 0)
-    {
-        assert(nbase_x >= std::max(1, nbase));
-    }
+    assert(nbase_x >= std::max(1, nbase));
 
     if (this->device == base_device::GpuDevice)
     {
@@ -596,7 +589,7 @@ void Diago_DavSubspace<T, Device>::diag_zhegvx(const int& nbase,
             }
         }
 
-        if (this->diago_dav_method == 0)
+        if (this->diag_subspace_method == 0)
         {
             if (this->diag_comm.rank == 0)
             {
@@ -637,8 +630,8 @@ void Diago_DavSubspace<T, Device>::diag_zhegvx(const int& nbase,
                         (*eigenvalue_iter).data(),
                         vcc_tmp.data(),
                         this->diag_comm.comm,
-                        this->block_size,
-                        this->diago_dav_method);
+                        this->diag_subspace_method,
+                        this->diago_subspace_bs);
             if (this->diag_comm.rank == 0)
             {
                 for (size_t i = 0; i < nbase; i++)

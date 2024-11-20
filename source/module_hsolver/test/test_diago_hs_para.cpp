@@ -128,7 +128,7 @@ void test_diago_hs(int lda, int nb, int random_seed, int nbands, int diag_type, 
         wfc.resize(lda * lda);
         generate_random_hs(lda, random_seed, h_mat, s_mat);
     }
-    hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb.data(), wfc.data(), comm, nb, diag_type);
+    hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb.data(), wfc.data(), comm, diag_type, nb);
 
     // Verify results
     if (my_rank == 0){
@@ -154,7 +154,7 @@ void test_diago_hs(int lda, int nb, int random_seed, int nbands, int diag_type, 
 
 
 template <typename T>
-void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
+void test_performance(int lda, int nb, int nbands, MPI_Comm comm,int case_numb, int loop_numb) {
     // generate 10 random H/S, and do the diagonalization 100 times by using elpa/scalapack and lapack.
     int my_rank, nproc;
     MPI_Comm_rank(comm, &my_rank);
@@ -176,15 +176,13 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
         wfc.resize(lda * lda);
     }
 
-    int nsample = 10;
-    int nloop = 10;
     // store all the times in a vector
-    std::vector<double> time_elpa(nsample, 0);
-    std::vector<double> time_scalap(nsample, 0);
-    std::vector<double> time_lapack(nsample, 0);
+    std::vector<double> time_elpa(case_numb, 0);
+    std::vector<double> time_scalap(case_numb, 0);
+    std::vector<double> time_lapack(case_numb, 0);
 
     if (my_rank == 0) std::cout << "Random matrix ";
-    for (int randomi = 0; randomi < nsample; ++randomi) 
+    for (int randomi = 0; randomi < case_numb; ++randomi) 
     {
         
         if (my_rank == 0) {
@@ -195,17 +193,11 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
         // ELPA
         MPI_Barrier(comm);
         auto start = std::chrono::high_resolution_clock::now();
-        //std::cout << "ELPA ";
-        for (int j=0;j<nloop;j++)
+        for (int j=0;j<loop_numb;j++)
         {
-            //auto start1 = std::chrono::high_resolution_clock::now();
-            hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_elpa.data(), wfc.data(), comm, nb, 1);
+            hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_elpa.data(), wfc.data(), comm, 1, nb);
             MPI_Barrier(comm);
-            //auto start2 = std::chrono::high_resolution_clock::now();
-            //MPI_Barrier(comm);
-            //if (my_rank == 0) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(start2 - start1).count() << " ";
         }
-        //std::cout << std::endl;
         MPI_Barrier(comm);
         auto end = std::chrono::high_resolution_clock::now();
         time_elpa[randomi] = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -213,9 +205,9 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
 
         // scalapack
         start = std::chrono::high_resolution_clock::now();
-        for (int j=0;j<nloop;j++)
+        for (int j=0;j<loop_numb;j++)
         {
-            hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_scalap.data(), wfc.data(), comm, nb, 2);
+            hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_scalap.data(), wfc.data(), comm, 2, nb);
             MPI_Barrier(comm);
         }
         MPI_Barrier(comm);
@@ -229,11 +221,10 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
             start = std::chrono::high_resolution_clock::now();
             base_device::DEVICE_CPU* ctx = {};
 
-            for (int j=0;j<nloop;j++)
+            for (int j=0;j<loop_numb;j++)
             {
                 h_tmp = h_mat;
                 s_tmp = s_mat;
-
                 hsolver::dngvx_op<T,base_device::DEVICE_CPU>()(ctx,
                                       lda,
                                       lda,
@@ -265,17 +256,17 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
     if (my_rank == 0)
     {
         std::cout << "\nELPA Time     : ";
-        for (int i=0; i < nsample;i++)
+        for (int i=0; i < case_numb;i++)
         {std::cout << time_elpa[i] << " ";}
         std::cout << std::endl;
 
         std::cout << "scalapack Time: ";
-        for (int i=0; i < nsample;i++)
+        for (int i=0; i < case_numb;i++)
         {std::cout << time_scalap[i] << " ";}
         std::cout << std::endl;
 
         std::cout << "lapack Time   : ";
-        for (int i=0; i < nsample;i++)
+        for (int i=0; i < case_numb;i++)
         {std::cout << time_lapack[i] << " ";}
         std::cout << std::endl;
 
@@ -283,27 +274,25 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm) {
         double avg_time_elpa = 0;
         double avg_time_scalap = 0;
         double avg_time_lapack = 0;
-        for (int i=0; i < nsample;i++)
+        for (int i=0; i < case_numb;i++)
         {
             avg_time_elpa += time_elpa[i];
             avg_time_scalap += time_scalap[i];
             avg_time_lapack += time_lapack[i];
         }
 
-        avg_time_elpa /= nsample;
-        avg_time_scalap /= nsample;
-        avg_time_lapack /= nsample;
+        avg_time_elpa /= case_numb;
+        avg_time_scalap /= case_numb;
+        avg_time_lapack /= case_numb;
         std::cout << "Average Lapack Time   : " << avg_time_lapack << " ms" << std::endl;
         std::cout << "Average ELPA Time     : " << avg_time_elpa << " ms, Speedup: " << avg_time_lapack / avg_time_elpa << std::endl;
         std::cout << "Average Scalapack Time: " << avg_time_scalap << " ms, Speedup: " << avg_time_lapack / avg_time_scalap << std::endl;
     }
-
-    
 }
 
 //test_diago_hs(int lda, int nb, int random_seed, int nbands, int diag_type, MPI_Comm comm)
 TEST(DiagoPxxxgvxElpaTest, Double) {
-    test_diago_hs<double>(16, 4, 0, 10, 1,MPI_COMM_WORLD);
+    test_diago_hs<double>(16, 4, 0, 10, 1, MPI_COMM_WORLD);
 }
 
 TEST(DiagoPxxxgvxElpaTest, ComplexDouble) {
@@ -326,17 +315,13 @@ TEST(DiagoPxxxgvxScalapackTest, ComplexFloat) {
     test_diago_hs<std::complex<float>>(16, 4, 0, 10,2,MPI_COMM_WORLD);
 }
 
-TEST(DiagoPxxxgvxPerformanceTest, Double) {
-    int ndim = 400;
-    int nband = 320;
-    test_performance<std::complex<double>>(ndim, 1,  nband, MPI_COMM_WORLD);
-    test_performance<std::complex<double>>(ndim, 4,  nband, MPI_COMM_WORLD);
-    test_performance<std::complex<double>>(ndim, 16, nband, MPI_COMM_WORLD);
-    test_performance<std::complex<double>>(ndim, 20, nband, MPI_COMM_WORLD);
-    test_performance<std::complex<double>>(ndim, 32, nband, MPI_COMM_WORLD);
-    test_performance<std::complex<double>>(ndim, 50, nband, MPI_COMM_WORLD);
-    test_performance<std::complex<double>>(ndim, 64, nband, MPI_COMM_WORLD);
-}
+//TEST(DiagoPxxxgvxPerformanceTest, Double) {
+//    int ndim = 200;
+//    int nband = 180;
+//    int case_numb = 10;
+//    int loop_numb = 10;
+//    test_performance<std::complex<double>>(ndim, 32,  nband, MPI_COMM_WORLD, case_numb, loop_numb);
+//}
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);

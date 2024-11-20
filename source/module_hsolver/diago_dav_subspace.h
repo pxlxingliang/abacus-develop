@@ -141,8 +141,8 @@ class Diago_DavSubspace
 
     bool test_exit_cond(const int& ntry, const int& notconv, const bool& scf);
 
-    int diago_dav_method; // 0: LAPACK, 1: ELPA, 2: ScaLAPACK, 3: new elpa
-    int block_size = 0; // the block size in 2d block cyclic distribution
+    int diag_subspace_method; // 0: LAPACK, 1: Gen-ELPA, 2: ScaLAPACK
+    int diago_subspace_bs = 0; // the block size in 2d block cyclic distribution if use elpa or scalapack
 
 #ifdef __DSP
     using resmem_complex_op = base_device::memory::resize_memory_op_mt<T, Device>;

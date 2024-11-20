@@ -478,9 +478,9 @@ void ReadInput::item_system()
         this->add_item(item);
     }
     {
-        Input_Item item("diago_dav_method");
-        item.annotation = "the method of solving the generalized eigenvalues of the HS of subspaces in the Dav subspace method. 0:LaPack; 1:elpa, 2:scalapack";
-        read_sync_int(input.diago_dav_method);
+        Input_Item item("diag_subspace_method");
+        item.annotation = "method of subspace diagonalization in dav_subspace. 0:LaPack; 1:genelpa, 2:scalapack";
+        read_sync_int(input.diag_subspace_method);
         this->add_item(item);
     }
     {

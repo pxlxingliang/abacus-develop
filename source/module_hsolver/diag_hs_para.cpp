@@ -83,19 +83,42 @@ void Diago_HS_para(
                  typename GetTypeReal<T>::type *const ekb,
                  T *const wfc,
                  const MPI_Comm& comm,
-                 const int block_size,
-                 const int diago_dav_method)
+                 const int diag_subspace_method,
+                 const int block_size)
 {
     int myrank;
     MPI_Comm_rank(comm, &myrank);
     Parallel_2D para2d_global;
     Parallel_2D para2d_local;
     para2d_global.init(lda,lda,lda,comm);
-    int max_nb = lda / std::max(1,std::max(para2d_global.dim0, para2d_global.dim1));
-    if (max_nb > block_size)
+
+    int max_nb = block_size;
+    if (block_size == 0)
     {
-        max_nb = block_size;
+        if (nband > 500)
+        {
+            max_nb = 32;
+        }
+        else
+        {
+            max_nb = 16;
+        }
     }
+    else if (block_size < 0)
+    {
+        std::cout << "Error: block_size in diago_subspace should be a positive integer. " << std::endl;
+        exit(1);
+    }
+
+    // for genelpa, if the block size is too large that some cores have no data, then it will cause error.
+    if (diag_subspace_method == 1)
+    {
+        if (max_nb * (std::max(para2d_global.dim0, para2d_global.dim1) - 1) >= lda)
+        {
+            max_nb = lda / std::max(para2d_global.dim0, para2d_global.dim1);
+        }
+    }
+    
     para2d_local.init(lda,lda,max_nb,comm);
     std::vector<T> h_local(para2d_local.get_col_size() * para2d_local.get_row_size());
     std::vector<T> s_local(para2d_local.get_col_size() * para2d_local.get_row_size());
@@ -105,7 +128,7 @@ void Diago_HS_para(
     Cpxgemr2d(lda,lda,h,1,1,para2d_global.desc,h_local.data(),1,1,para2d_local.desc,para2d_local.blacs_ctxt);
     Cpxgemr2d(lda,lda,s,1,1,para2d_global.desc,s_local.data(),1,1,para2d_local.desc,para2d_local.blacs_ctxt);
 
-    if (diago_dav_method == 1)
+    if (diag_subspace_method == 1)
     {
 #ifdef __ELPA 
         elpa_diag(comm, nband, h_local.data(), s_local.data(), ekb, wfc_2d.data(), para2d_local);
@@ -114,12 +137,12 @@ void Diago_HS_para(
         exit(1);
 #endif        
     }
-    else if (diago_dav_method == 2)
+    else if (diag_subspace_method == 2)
     {
         hsolver::pxxxgvx_diag(para2d_local.desc, para2d_local.get_row_size(), para2d_local.get_col_size(),nband, h_local.data(), s_local.data(), ekb, wfc_2d.data());
     }
     else{
-        std::cout << "Error: parallel diagonalization method is not supported. " << "diago_dav_method = " << diago_dav_method << std::endl;
+        std::cout << "Error: parallel diagonalization method is not supported. " << "diag_subspace_method = " << diag_subspace_method << std::endl;
         exit(1);
     }
 
@@ -139,8 +162,8 @@ template void Diago_HS_para<double>(double* h,
                                     typename GetTypeReal<double>::type *const ekb, 
                                     double *const wfc, 
                                     const MPI_Comm& comm, 
-                                    const int block_size, 
-                                    const int diago_dav_method);
+                                    const int diag_subspace_method,
+                                    const int block_size);
 template void Diago_HS_para<std::complex<double>>(std::complex<double>* h, 
                                     std::complex<double>* s, 
                                     const int lda, 
@@ -148,8 +171,8 @@ template void Diago_HS_para<std::complex<double>>(std::complex<double>* h,
                                     typename GetTypeReal<std::complex<double>>::type *const ekb, 
                                     std::complex<double> *const wfc, 
                                     const MPI_Comm& comm, 
-                                    const int block_size, 
-                                    const int diago_dav_method);      
+                                    const int diag_subspace_method,
+                                    const int block_size);      
 template void Diago_HS_para<float>(float* h, 
                                     float* s, 
                                     const int lda, 
@@ -157,8 +180,8 @@ template void Diago_HS_para<float>(float* h,
                                     typename GetTypeReal<float>::type *const ekb, 
                                     float *const wfc, 
                                     const MPI_Comm& comm, 
-                                    const int block_size, 
-                                    const int diago_dav_method);
+                                    const int diag_subspace_method,
+                                    const int block_size);
 template void Diago_HS_para<std::complex<float>>(std::complex<float>* h, 
                                     std::complex<float>* s, 
                                     const int lda, 
@@ -166,8 +189,8 @@ template void Diago_HS_para<std::complex<float>>(std::complex<float>* h,
                                     typename GetTypeReal<std::complex<float>>::type *const ekb, 
                                     std::complex<float> *const wfc, 
                                     const MPI_Comm& comm, 
-                                    const int block_size, 
-                                    const int diago_dav_method);                                                                                                      
+                                    const int diag_subspace_method,
+                                    const int block_size);                                                                                                      
 
 
 

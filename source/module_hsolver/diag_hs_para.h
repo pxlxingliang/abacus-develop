@@ -22,11 +22,13 @@ namespace hsolver
  * @param ekb to store the eigenvalues.
  * @param wfc to store the eigenvectors
  * @param comm the communicator
- * @param diago_dav_method the method to solve the generalized eigenvalue problem
+ * @param diag_subspace_method the method to solve the generalized eigenvalue problem
+ * @param block_size the block size in 2d block cyclic distribution if use elpa or scalapack. 
  * 
  * @note 1. h and s should be full matrix in rank 0 of the communicator, and the other ranks is not concerned.
  * @note 2. wfc is complete in rank 0, and not store in other ranks.
- * @note 3. diago_dav_method should be 1: by elpa, 2: by scalapack
+ * @note 3. diag_subspace_method should be 1: by elpa, 2: by scalapack
+ * @note 4. block_size should be 0 or a positive integer. If it is 0, then will use a value as large as possible that is allowed
  */
 template <typename T>
 void Diago_HS_para(
@@ -37,8 +39,8 @@ void Diago_HS_para(
                  typename GetTypeReal<T>::type *const ekb,
                  T *const wfc,
                  const MPI_Comm& comm,
-                 const int block_size,
-                 const int diago_dav_method);
+                 const int diag_subspace_method,
+                 const int block_size=0);
 #endif
 
 } // namespace hsolver                 
