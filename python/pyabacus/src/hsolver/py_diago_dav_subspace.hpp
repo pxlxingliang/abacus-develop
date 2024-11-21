@@ -138,7 +138,9 @@ public:
             tol, 
             max_iter, 
             need_subspace, 
-            comm_info
+            comm_info,
+            PARAM.inp.diag_subspace_method,
+            PARAM.inp.nb2d
         );
 
         return obj->diag(hpsi_func, psi, nbasis, eigenvalue, diag_ethr.data(), scf_type);
