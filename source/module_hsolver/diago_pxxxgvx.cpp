@@ -1,6 +1,6 @@
 #include <complex>
 #include <vector>
-#include "string.h"
+#include <cstring>
 #include <iostream>
 
 #include "diago_pxxxgvx.h"
