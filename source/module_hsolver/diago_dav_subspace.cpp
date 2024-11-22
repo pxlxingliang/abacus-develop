@@ -11,7 +11,10 @@
 #include "module_hsolver/diag_hs_para.h"
 
 #include <vector>
+
+#ifdef __MPI
 #include <mpi.h>
+#endif
 
 using namespace hsolver;
 
