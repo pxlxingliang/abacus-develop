@@ -318,7 +318,7 @@ TEST_F(IntArrayTest,Alloc)
 {
 	std::string output;
 	testing::internal::CaptureStdout();
-	EXPECT_EXIT(ModuleBase::IntArrayAlloc(), ::testing::ExitedWithCode(0),"");
+	EXPECT_EXIT(ModuleBase::IntArrayAlloc(), ::testing::ExitedWithCode(1),"");
 	output = testing::internal::GetCapturedStdout();
 	EXPECT_THAT(output,testing::HasSubstr("Allocation error for IntArray"));
 }

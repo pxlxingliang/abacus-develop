@@ -235,8 +235,8 @@ TEST_F(vdwd2Test, D2ReadFileError)
     vdw::Vdwd2 vdwd2_test(ucell);
     
     testing::internal::CaptureStdout();
-    EXPECT_EXIT(vdwd2_test.parameter().C6_input(input.vdw_C6_file, input.vdw_C6_unit), ::testing::ExitedWithCode(0), "");
-    EXPECT_EXIT(vdwd2_test.parameter().R0_input(input.vdw_R0_file, input.vdw_R0_unit), ::testing::ExitedWithCode(0), "");
+    EXPECT_EXIT(vdwd2_test.parameter().C6_input(input.vdw_C6_file, input.vdw_C6_unit), ::testing::ExitedWithCode(1), "");
+    EXPECT_EXIT(vdwd2_test.parameter().R0_input(input.vdw_R0_file, input.vdw_R0_unit), ::testing::ExitedWithCode(1), "");
     std::string output = testing::internal::GetCapturedStdout();
 }
 
@@ -266,8 +266,8 @@ TEST_F(vdwd2Test, D2WrongUnit)
     vdw::Vdwd2 vdwd2_test(ucell);
 
     testing::internal::CaptureStdout();
-    EXPECT_EXIT(vdwd2_test.parameter().C6_input(input.vdw_C6_file, input.vdw_C6_unit), ::testing::ExitedWithCode(0), "");
-    EXPECT_EXIT(vdwd2_test.parameter().R0_input(input.vdw_R0_file, input.vdw_R0_unit), ::testing::ExitedWithCode(0), "");
+    EXPECT_EXIT(vdwd2_test.parameter().C6_input(input.vdw_C6_file, input.vdw_C6_unit), ::testing::ExitedWithCode(1), "");
+    EXPECT_EXIT(vdwd2_test.parameter().R0_input(input.vdw_R0_file, input.vdw_R0_unit), ::testing::ExitedWithCode(1), "");
     std::string output = testing::internal::GetCapturedStdout();
 }
 
@@ -298,7 +298,7 @@ TEST_F(vdwd2Test, D2R0ZeroQuit)
     vdwd2_test.parameter().R0_["Si"] = 0.0;
     
     testing::internal::CaptureStdout();
-    EXPECT_EXIT(vdwd2_test.get_energy(), ::testing::ExitedWithCode(0), "");
+    EXPECT_EXIT(vdwd2_test.get_energy(), ::testing::ExitedWithCode(1), "");
     std::string output = testing::internal::GetCapturedStdout();
 }
 
