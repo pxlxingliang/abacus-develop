@@ -696,7 +696,7 @@ TEST_F(GlobalFunctionTest,BlockHere)
 	std::string block_in="111";
 	GlobalV::MY_RANK=1;
 	testing::internal::CaptureStdout();
-	EXPECT_EXIT(ModuleBase::GlobalFunc::BLOCK_HERE(block_in), ::testing::ExitedWithCode(1),"");
+	EXPECT_EXIT(ModuleBase::GlobalFunc::BLOCK_HERE(block_in), ::testing::ExitedWithCode(0),"");
 	output2 = testing::internal::GetCapturedStdout();
 	EXPECT_THAT(output2,testing::HasSubstr("\n********************************************"
 		"\n Here is a Block, 1: go on 0: quit"
@@ -731,7 +731,7 @@ TEST_F(GlobalFunctionTest,BlockHere3)
 	std::string fake_input = "0";
 	std::istringstream iss{fake_input};
 	std::cin.rdbuf(iss.rdbuf());
-	EXPECT_EXIT(ModuleBase::GlobalFunc::BLOCK_HERE(block_in), ::testing::ExitedWithCode(1),"");
+	EXPECT_EXIT(ModuleBase::GlobalFunc::BLOCK_HERE(block_in), ::testing::ExitedWithCode(0),"");
 	output2 = testing::internal::GetCapturedStdout();
 	EXPECT_THAT(output2,testing::HasSubstr("\n********************************************"
 		"\n Here is a Block, 1: go on 0: quit"

@@ -59,7 +59,7 @@ TEST_F(ToolQuitTest,warning)
 TEST_F(ToolQuitTest,quit)
 {
 	testing::internal::CaptureStdout();
-	EXPECT_EXIT(ModuleBase::QUIT(), ::testing::ExitedWithCode(1), "");
+	EXPECT_EXIT(ModuleBase::QUIT(), ::testing::ExitedWithCode(0), "");
 	output = testing::internal::GetCapturedStdout();
 	// test output on screen
 	EXPECT_THAT(output,testing::HasSubstr("TIME STATISTICS"));

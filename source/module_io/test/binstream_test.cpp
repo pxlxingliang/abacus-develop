@@ -38,7 +38,7 @@ TEST_F(BinstreamTest, variable)
 	wfc >> a1;
 	wfc >> a2;
 	testing::internal::CaptureStdout();
-    EXPECT_EXIT(wfc >> a3, ::testing::ExitedWithCode(1), "");
+    EXPECT_EXIT(wfc >> a3, ::testing::ExitedWithCode(0), "");
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_THAT(output,testing::HasSubstr("Binstream"));
 	EXPECT_EQ(bool(wfc), true);
@@ -50,7 +50,7 @@ TEST_F(BinstreamTest, variable)
 
 	wfc.open("wfc","w");
 	testing::internal::CaptureStdout();
-    EXPECT_EXIT(wfc >> a3, ::testing::ExitedWithCode(1), "");
+    EXPECT_EXIT(wfc >> a3, ::testing::ExitedWithCode(0), "");
     output = testing::internal::GetCapturedStdout();
     EXPECT_THAT(output,testing::HasSubstr("Binstream"));
 	remove("wfc");
@@ -73,7 +73,7 @@ TEST_F(BinstreamTest, array)
 
 	Binstream rwfc("wfc","r");
 	testing::internal::CaptureStdout();
-    EXPECT_EXIT(rwfc.read(b,11);, ::testing::ExitedWithCode(1), "");
+    EXPECT_EXIT(rwfc.read(b,11);, ::testing::ExitedWithCode(0), "");
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_THAT(output,testing::HasSubstr("Binstream"));
 	rwfc.close();

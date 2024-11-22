@@ -191,7 +191,9 @@ TEST_F(vdwd2Test, D2Default)
 TEST_F(vdwd2Test, WrongVdwType)
 {
     input.vdw_method = "d2d3";
-    EXPECT_EQ(vdw::make_vdw(ucell, input),nullptr);
+    testing::internal::CaptureStdout();
+    EXPECT_EXIT( vdw::make_vdw(ucell, input); ,::testing::ExitedWithCode(1), "");
+    std::string output = testing::internal::GetCapturedStdout();
 }
 
 TEST_F(vdwd2Test, OneAtomWarning)

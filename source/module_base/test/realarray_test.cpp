@@ -197,7 +197,7 @@ TEST_F(realArrayTest,Alloc)
 {
 	std::string output;
 	testing::internal::CaptureStdout();
-	EXPECT_EXIT(ModuleBase::realArrayAlloc(), ::testing::ExitedWithCode(1),"");
+	EXPECT_EXIT(ModuleBase::realArrayAlloc(), ::testing::ExitedWithCode(0),"");
 	output = testing::internal::GetCapturedStdout();
 	EXPECT_THAT(output,testing::HasSubstr("Allocation error for realArray"));
 }
