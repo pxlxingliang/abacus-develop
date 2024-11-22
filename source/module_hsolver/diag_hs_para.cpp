@@ -3,7 +3,10 @@
 #include "module_base/scalapack_connector.h"
 #include "module_basis/module_ao/parallel_2d.h"
 #include "module_hsolver/diago_pxxxgvx.h"
+
+#ifdef __ELPA
 #include "module_hsolver/genelpa/elpa_solver.h"
+#endif
 
 #include <iostream>
 
@@ -186,7 +189,7 @@ template void Diago_HS_para<float>(float* h,
                                    const MPI_Comm& comm,
                                    const int diag_subspace,
                                    const int block_size);
-                                   
+
 template void Diago_HS_para<std::complex<float>>(std::complex<float>* h,
                                                  std::complex<float>* s,
                                                  const int lda,
