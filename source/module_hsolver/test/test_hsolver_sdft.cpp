@@ -23,6 +23,58 @@ Sto_Func<REAL>::Sto_Func()
 }
 template class Sto_Func<double>;
 
+// mock Diago_HS_para
+namespace hsolver {
+template <typename T>
+void Diago_HS_para(T* h,
+                   T* s,
+                   const int lda,
+                   const int nband,
+                   typename GetTypeReal<T>::type* const ekb,
+                   T* const wfc,
+                   const MPI_Comm& comm,
+                   const int diag_subspace,
+                   const int block_size = 0)
+{}
+template void Diago_HS_para<double>(double* h,
+                                    double* s,
+                                    const int lda,
+                                    const int nband,
+                                    typename GetTypeReal<double>::type* const ekb,
+                                    double* const wfc,
+                                    const MPI_Comm& comm,
+                                    const int diag_subspace,
+                                    const int block_size);
+template void Diago_HS_para<std::complex<double>>(std::complex<double>* h,
+                                                  std::complex<double>* s,
+                                                  const int lda,
+                                                  const int nband,
+                                                  typename GetTypeReal<std::complex<double>>::type* const ekb,
+                                                  std::complex<double>* const wfc,
+                                                  const MPI_Comm& comm,
+                                                  const int diag_subspace,
+                                                  const int block_size);
+template void Diago_HS_para<float>(float* h,
+                                   float* s,
+                                   const int lda,
+                                   const int nband,
+                                   typename GetTypeReal<float>::type* const ekb,
+                                   float* const wfc,
+                                   const MPI_Comm& comm,
+                                   const int diag_subspace,
+                                   const int block_size);          
+template void Diago_HS_para<std::complex<float>>(std::complex<float>* h,
+                                                 std::complex<float>* s,
+                                                 const int lda,
+                                                 const int nband,
+                                                 typename GetTypeReal<std::complex<float>>::type* const ekb,
+                                                 std::complex<float>* const wfc,
+                                                 const MPI_Comm& comm,
+                                                 const int diag_subspace,
+                                                 const int block_size);
+
+}
+
 
 template <>
 elecstate::ElecStatePW<std::complex<double>, base_device::DEVICE_CPU>::ElecStatePW(ModulePW::PW_Basis_K* wfc_basis_in,

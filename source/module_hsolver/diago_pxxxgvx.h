@@ -8,7 +8,7 @@ namespace hsolver
 
 #ifdef __MPI
 /**
- * @brief generalized eigenvalue problem using pdsygvx/pzhegvx/pdsygvx/pzhegvx
+ * @brief Wrapper function for Scalapack's generalized eigensolver routines: pdsygvx_, pzhegvx_, pssygvx_, pchegvx_.
  * 
  * @param desc the descriptor of scalapack descriptor
  * @param ncol the number of columns of the H/S matrix in current processor

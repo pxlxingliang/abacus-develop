@@ -24,11 +24,11 @@ Diago_DavSubspace<T, Device>::Diago_DavSubspace(const std::vector<Real>& precond
                                                 const int& diag_nmax_in,
                                                 const bool& need_subspace_in,
                                                 const diag_comm_info& diag_comm_in,
-                                                const int diag_subspace_method_in,
+                                                const int diag_subspace_in,
                                                 const int diago_subspace_bs_in)
     : precondition(precondition_in), n_band(nband_in), dim(nbasis_in), nbase_x(nband_in * david_ndim_in),
       diag_thr(diag_thr_in), iter_nmax(diag_nmax_in), is_subspace(need_subspace_in), diag_comm(diag_comm_in),
-        diag_subspace_method(diag_subspace_method_in), diago_subspace_bs(diago_subspace_bs_in)
+        diag_subspace(diag_subspace_in), diago_subspace_bs(diago_subspace_bs_in)
 {
     this->device = base_device::get_device_type<Device>(this->ctx);
 
@@ -38,7 +38,7 @@ Diago_DavSubspace<T, Device>::Diago_DavSubspace(const std::vector<Real>& precond
 
     assert(david_ndim_in > 1);
     assert(david_ndim_in * nband_in < nbasis_in * this->diag_comm.nproc);
-    assert(diag_subspace_method >= 0 && diag_subspace_method < 3);
+    assert(diag_subspace >= 0 && diag_subspace < 3);
 
     // TODO: Added memory usage statistics
 
@@ -573,7 +573,7 @@ void Diago_DavSubspace<T, Device>::diag_zhegvx(const int& nbase,
     }
     else
     {
-        if (this->diag_subspace_method == 0)
+        if (this->diag_subspace == 0)
         {
             if (this->diag_comm.rank == 0)
             {
@@ -636,14 +636,14 @@ void Diago_DavSubspace<T, Device>::diag_zhegvx(const int& nbase,
                 }
             }
             Diago_HS_para(h_diag.data(),
-                        s_diag.data(),
-                        nbase,
-                        nband,
-                        (*eigenvalue_iter).data(),
-                        vcc_tmp.data(),
-                        this->diag_comm.comm,
-                        this->diag_subspace_method,
-                        this->diago_subspace_bs);
+                          s_diag.data(),
+                          nbase,
+                          nband,
+                          (*eigenvalue_iter).data(),
+                          vcc_tmp.data(),
+                          this->diag_comm.comm,
+                          this->diag_subspace,
+                          this->diago_subspace_bs);
             if (this->diag_comm.rank == 0)
             {
                 for (size_t i = 0; i < nband; i++)

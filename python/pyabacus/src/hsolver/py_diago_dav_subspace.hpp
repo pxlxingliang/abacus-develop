@@ -139,7 +139,7 @@ public:
             max_iter, 
             need_subspace, 
             comm_info,
-            PARAM.inp.diag_subspace_method,
+            PARAM.inp.diag_subspace,
             PARAM.inp.nb2d
         );
 

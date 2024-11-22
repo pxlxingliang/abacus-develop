@@ -39,7 +39,7 @@
     - [pw\_diag\_thr](#pw_diag_thr)
     - [pw\_diag\_nmax](#pw_diag_nmax)
     - [pw\_diag\_ndim](#pw_diag_ndim)
-    - [diag\_subspace\_method](#diag_subspace_method)
+    - [diag\_subspace\_method](#diag_subspace)
     - [erf\_ecut](#erf_ecut)
     - [fft\_mode](#fft_mode)
     - [erf\_height](#erf_height)
@@ -787,7 +787,7 @@ These variables are used to control the plane wave related parameters.
 - **Description**: Only useful when you use `ks_solver = dav` or `ks_solver = dav_subspace`. It indicates dimension of workspace(number of wavefunction packets, at least 2 needed) for the Davidson method. A larger value may yield a smaller number of iterations in the algorithm but uses more memory and more CPU time in subspace diagonalization.
 - **Default**: 4 
 
-### diag_subspace_method
+### diag_subspace
 
 - **Type**: Integer
 - **Description**: The method to diagonalize subspace in dav_subspace method. The available options are:

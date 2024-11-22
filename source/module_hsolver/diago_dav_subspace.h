@@ -141,7 +141,7 @@ class Diago_DavSubspace
 
     bool test_exit_cond(const int& ntry, const int& notconv, const bool& scf);
 
-    int diag_subspace_method; // 0: LAPACK, 1: Gen-ELPA, 2: ScaLAPACK
+    int diag_subspace; // 0: LAPACK, 1: Gen-ELPA, 2: ScaLAPACK
     int diago_subspace_bs = 0; // the block size in 2d block cyclic distribution if use elpa or scalapack
 
 #ifdef __DSP

@@ -88,7 +88,7 @@ struct Input_para
     double pw_diag_thr = 0.01; ///< used in cg method
     int pw_diag_ndim = 4;      ///< dimension of workspace for Davidson diagonalization
     int diago_cg_prec = 1;     ///< mohan add 2012-03-31
-    int diag_subspace_method = 0; // 0: Lapack, 1: elpa, 2: scalapack
+    int diag_subspace = 0; // 0: Lapack, 1: elpa, 2: scalapack
 
     std::string smearing_method = "gauss"; ///< "gauss",
                                            ///< "mp","methfessel-paxton"

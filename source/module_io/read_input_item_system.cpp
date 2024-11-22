@@ -478,9 +478,9 @@ void ReadInput::item_system()
         this->add_item(item);
     }
     {
-        Input_Item item("diag_subspace_method");
+        Input_Item item("diag_subspace");
         item.annotation = "method of subspace diagonalization in dav_subspace. 0:LaPack; 1:genelpa, 2:scalapack";
-        read_sync_int(input.diag_subspace_method);
+        read_sync_int(input.diag_subspace);
         this->add_item(item);
     }
     {

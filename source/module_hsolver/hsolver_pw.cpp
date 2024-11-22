@@ -501,7 +501,7 @@ void HSolverPW<T, Device>::hamiltSolvePsiK(hamilt::Hamilt<T, Device>* hm,
                                                   this->diag_iter_max,
                                                   this->need_subspace,
                                                   comm_info,
-                                                  PARAM.inp.diag_subspace_method,
+                                                  PARAM.inp.diag_subspace,
                                                   PARAM.inp.nb2d);
 
         DiagoIterAssist<T, Device>::avg_iter += static_cast<double>(
