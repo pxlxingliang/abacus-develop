@@ -126,14 +126,7 @@ void test_diago_hs(int lda, int nb, int random_seed, int nbands, int diag_type, 
         h_mat.resize(lda * lda);
         s_mat.resize(lda * lda);
         wfc.resize(lda * lda);
-        //generate_random_hs(lda, random_seed, h_mat, s_mat);
-        //read h from h.dat and s from s.dat,
-        std::ifstream hfile("h.dat");
-        hfile.read((char*)h_mat.data(), lda * lda * sizeof(T));
-        hfile.close();
-        std::ifstream sfile("s.dat");
-        sfile.read((char*)s_mat.data(), lda * lda * sizeof(T));
-        sfile.close();
+        generate_random_hs(lda, random_seed, h_mat, s_mat);
     }
     hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb.data(), wfc.data(), comm, diag_type, nb);
 

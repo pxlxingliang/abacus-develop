@@ -25,5 +25,5 @@ mixing_type		plain
 mixing_beta		0.5
 
 ks_solver       dav_subspace
-diag_subspace_method 2
+diag_subspace 2
 nb2d 4
