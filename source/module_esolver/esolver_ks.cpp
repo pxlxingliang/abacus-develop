@@ -2,6 +2,7 @@
 
 #include "module_base/timer.h"
 #include "module_cell/cal_atoms_info.h"
+#include "module_io/cube_io.h"
 #include "module_io/json_output/init_info.h"
 #include "module_io/json_output/output_info.h"
 #include "module_io/output_log.h"
@@ -441,15 +442,16 @@ void ESolver_KS<T, Device>::runner(UnitCell& ucell, const int istep)
     this->diag_ethr = PARAM.inp.pw_diag_thr;
     for (int iter = 1; iter <= this->maxniter; ++iter)
     {
-        // 6) initialization of SCF iterations
+        // 5) initialization of SCF iterations
         this->iter_init(ucell, istep, iter);
 
+        // 6) use Hamiltonian to obtain charge density
         this->hamilt2density(ucell, istep, iter, diag_ethr);
 
-        // 10) finish scf iterations
+        // 7) finish scf iterations
         this->iter_finish(ucell, istep, iter);
 
-        // 13) check convergence
+        // 8) check convergence
         if (this->conv_esolver || this->oscillate_esolver)
         {
             this->niter = iter;
@@ -461,7 +463,7 @@ void ESolver_KS<T, Device>::runner(UnitCell& ucell, const int istep)
         }
     } // end scf iterations
 
-    // 15) after scf
+    // 9) after scf
     ModuleBase::timer::tick(this->classname, "after_scf");
     this->after_scf(ucell, istep);
     ModuleBase::timer::tick(this->classname, "after_scf");
@@ -678,6 +680,46 @@ void ESolver_KS<T, Device>::iter_finish(UnitCell& ucell, const int istep, int& i
     {
         this->p_chgmix->mixing_restart_last = iter;
         std::cout << " SCF restart after this step!" << std::endl;
+    }
+
+    //! output charge density and density matrix
+    if (this->out_freq_elec && iter % this->out_freq_elec == 0)
+    {
+        for (int is = 0; is < PARAM.inp.nspin; is++)
+        {
+            double* data = nullptr;
+            if (PARAM.inp.dm_to_rho)
+            {
+                data = this->pelec->charge->rho[is];
+            }
+            else
+            {
+                data = this->pelec->charge->rho_save[is];
+            }
+            std::string fn = PARAM.globalv.global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_CHG.cube";
+            ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
+                                          data,
+                                          is,
+                                          PARAM.inp.nspin,
+                                          0,
+                                          fn,
+                                          this->pelec->eferm.get_efval(is),
+                                          &(ucell),
+                                          3,
+                                          1);
+            if (XC_Functional::get_func_type() == 3 || XC_Functional::get_func_type() == 5)
+            {
+                fn = PARAM.globalv.global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_TAU.cube";
+                ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
+                                              this->pelec->charge->kin_r_save[is],
+                                              is,
+                                              PARAM.inp.nspin,
+                                              0,
+                                              fn,
+                                              this->pelec->eferm.get_efval(is),
+                                              &(ucell));
+            }
+        }
     }
 }
 
