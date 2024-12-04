@@ -245,7 +245,7 @@ AddTest(
 )
 
 add_test(
-  TARGET io_dmk_io_parallel
+  NAME io_dmk_io_parallel
   COMMAND mpirun -np 2 ./io_dmk_io
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
@@ -257,7 +257,7 @@ AddTest(
 )
 
 add_test(
-  TARGET io_read_wfc_nao_test_parallel
+  NAME io_read_wfc_nao_test_parallel
   COMMAND mpirun -np 2 ./io_read_wfc_nao_test
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
