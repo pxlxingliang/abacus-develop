@@ -244,7 +244,7 @@ AddTest(
   SOURCES io_dmk_test.cpp ../io_dmk.cpp ../output.cpp
 )
 
-AddTest(
+add_test(
   TARGET io_dmk_io_parallel
   COMMAND mpirun -np 2 ./io_dmk_io
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -256,7 +256,7 @@ AddTest(
   SOURCES read_wfc_nao_test.cpp ../read_wfc_nao.cpp ../../module_psi/psi.cpp ../../module_basis/module_ao/parallel_orbitals.cpp
 )
 
-AddTest(
+add_test(
   TARGET io_read_wfc_nao_test_parallel
   COMMAND mpirun -np 2 ./io_read_wfc_nao_test
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
