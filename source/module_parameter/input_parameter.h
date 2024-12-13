@@ -119,6 +119,7 @@ struct Input_para
     bool scf_os_stop = false;  ///< whether to stop scf when oscillation is detected
     double scf_os_thr = -0.01;  ///< drho threshold for oscillation
     int scf_os_ndim = 0;       ///< number of old iterations used for oscillation detection
+    int sc_os_ndim = 5;       ///< number of old iterations used for oscillation detection in Spin-Constrained DFT
 
     bool lspinorb = false;   ///< consider the spin-orbit interaction
     bool noncolin = false;   ///< using non-collinear-spin
@@ -164,7 +165,7 @@ struct Input_para
     double press3 = 0;
     double relax_bfgs_w1 = 0.01;     ///< wolfe condition 1
     double relax_bfgs_w2 = 0.5;      ///< wolfe condition 2
-    double relax_bfgs_rmax = 0.8;    ///< trust radius max
+    double relax_bfgs_rmax = 0.2;    ///< trust radius max
     double relax_bfgs_rmin = 1e-05;  ///< trust radius min
     double relax_bfgs_init = 0.5;    ///< initial move
     std::string fixed_axes = "None"; ///< which axes are fixed
@@ -592,5 +593,12 @@ struct Input_para
     int  test_pp = 0;                ///< variables for test_pp only
     int  test_relax_method = false;  ///< variables for test_relax_method only
     int  test_deconstructor = false; ///< variables for test_deconstructor only
+
+    // ==============   #Parameters (21.RDMFT) =====================
+    // RDMFT    jghan added on 2024-07-06
+    bool rdmft = false;                           // rdmft, reduced density matrix funcional theory
+    double rdmft_power_alpha = 0.656;             // the alpha parameter of power-functional, g(occ_number) = occ_number^alpha
+    // double rdmft_wp22_omega;                 // the omega parameter of wp22-functional = exx_hse_omega
+
 };
 #endif
