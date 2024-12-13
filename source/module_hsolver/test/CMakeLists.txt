@@ -157,7 +157,7 @@ install(FILES parallel_k2d_test.sh DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 AddTest(
   TARGET hsolver_diago_hs_parallel
   LIBS parameter  ${math_libs} ELPA::ELPA base device MPI::MPI_CXX genelpa psi
-  SOURCES test_diago_hs_para.cpp ../diag_hs_para.cpp ../diago_pxxxgvx.cpp  ../../module_basis/module_ao/parallel_2d.cpp ../diago_elpa.cpp ../diago_scalapack.cpp 
+  SOURCES test_diago_hs_para.cpp ../diag_hs_para.cpp ../diago_pxxxgvx.cpp ../diago_elpa.cpp ../diago_scalapack.cpp 
 )
 
 find_program(BASH bash)
