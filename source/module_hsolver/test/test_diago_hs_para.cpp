@@ -180,7 +180,8 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm,int case_numb, 
     std::vector<double> time_scalap(case_numb, 0);
     std::vector<double> time_lapack(case_numb, 0);
 
-    if (my_rank == 0) std::cout << "Random matrix ";
+    if (my_rank == 0) { std::cout << "Random matrix ";
+}
     for (int randomi = 0; randomi < case_numb; ++randomi) 
     {
         
