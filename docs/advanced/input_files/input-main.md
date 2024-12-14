@@ -39,7 +39,7 @@
     - [pw\_diag\_thr](#pw_diag_thr)
     - [pw\_diag\_nmax](#pw_diag_nmax)
     - [pw\_diag\_ndim](#pw_diag_ndim)
-    - [diag\_subspace\_method](#diag_subspace)
+    - [diag\_subspace](#diag_subspace)
     - [erf\_ecut](#erf_ecut)
     - [fft\_mode](#fft_mode)
     - [erf\_height](#erf_height)
