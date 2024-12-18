@@ -638,7 +638,7 @@ void Diago_DavSubspace<T, Device>::diag_zhegvx(const int& nbase,
                     }
                 }
             }
-            Diago_HS_para(h_diag.data(),
+            diago_hs_para(h_diag.data(),
                           s_diag.data(),
                           nbase,
                           nband,

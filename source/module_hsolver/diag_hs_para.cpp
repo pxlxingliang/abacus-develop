@@ -71,7 +71,7 @@ void elpa_diag(MPI_Comm comm,
 #ifdef __MPI
 
 template <typename T>
-void Diago_HS_para(T* h,
+void diago_hs_para(T* h,
                    T* s,
                    const int lda,
                    const int nband,
@@ -160,7 +160,7 @@ void Diago_HS_para(T* h,
 }
 
 // template instantiation
-template void Diago_HS_para<double>(double* h,
+template void diago_hs_para<double>(double* h,
                                     double* s,
                                     const int lda,
                                     const int nband,
@@ -170,7 +170,7 @@ template void Diago_HS_para<double>(double* h,
                                     const int diag_subspace,
                                     const int block_size);
 
-template void Diago_HS_para<std::complex<double>>(std::complex<double>* h,
+template void diago_hs_para<std::complex<double>>(std::complex<double>* h,
                                                   std::complex<double>* s,
                                                   const int lda,
                                                   const int nband,
@@ -180,7 +180,7 @@ template void Diago_HS_para<std::complex<double>>(std::complex<double>* h,
                                                   const int diag_subspace,
                                                   const int block_size);
 
-template void Diago_HS_para<float>(float* h,
+template void diago_hs_para<float>(float* h,
                                    float* s,
                                    const int lda,
                                    const int nband,
@@ -190,7 +190,7 @@ template void Diago_HS_para<float>(float* h,
                                    const int diag_subspace,
                                    const int block_size);
 
-template void Diago_HS_para<std::complex<float>>(std::complex<float>* h,
+template void diago_hs_para<std::complex<float>>(std::complex<float>* h,
                                                  std::complex<float>* s,
                                                  const int lda,
                                                  const int nband,

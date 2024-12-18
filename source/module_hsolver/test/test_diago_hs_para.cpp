@@ -128,7 +128,7 @@ void test_diago_hs(int lda, int nb, int random_seed, int nbands, int diag_type, 
         wfc.resize(lda * lda);
         generate_random_hs(lda, random_seed, h_mat, s_mat);
     }
-    hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb.data(), wfc.data(), comm, diag_type, nb);
+    hsolver::diago_hs_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb.data(), wfc.data(), comm, diag_type, nb);
 
     // Verify results
     if (my_rank == 0){
@@ -195,7 +195,7 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm,int case_numb, 
         auto start = std::chrono::high_resolution_clock::now();
         for (int j=0;j<loop_numb;j++)
         {
-            hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_elpa.data(), wfc.data(), comm, 1, nb);
+            hsolver::diago_hs_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_elpa.data(), wfc.data(), comm, 1, nb);
             MPI_Barrier(comm);
         }
         MPI_Barrier(comm);
@@ -207,7 +207,7 @@ void test_performance(int lda, int nb, int nbands, MPI_Comm comm,int case_numb, 
         start = std::chrono::high_resolution_clock::now();
         for (int j=0;j<loop_numb;j++)
         {
-            hsolver::Diago_HS_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_scalap.data(), wfc.data(), comm, 2, nb);
+            hsolver::diago_hs_para<T>(h_mat.data(), s_mat.data(), lda, nbands,ekb_scalap.data(), wfc.data(), comm, 2, nb);
             MPI_Barrier(comm);
         }
         MPI_Barrier(comm);

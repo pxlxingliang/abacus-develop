@@ -31,7 +31,7 @@ namespace hsolver
  * @note 4. block_size should be 0 or a positive integer. If it is 0, then will use a value as large as possible that is allowed
  */
 template <typename T>
-void Diago_HS_para(T* h,
+void diago_hs_para(T* h,
                    T* s,
                    const int lda,
                    const int nband,
