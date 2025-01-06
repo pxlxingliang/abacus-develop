@@ -92,7 +92,7 @@ public:
         const hsolver::diag_comm_info comm_info = {mypnum, nprocs};
 #endif
 
-		const int dim = phi.get_current_nbas();
+		const int dim = phi.get_current_ngk();
 		const int nband = phi.get_nbands();
 		const int ld_psi = phi.get_nbasis();
 		hsolver::DiagoDavid<std::complex<double>> dav(precondition, nband, dim, order, false, comm_info);
@@ -115,7 +115,7 @@ public:
 		auto hpsi_func = [phm](std::complex<double>* psi_in,std::complex<double>* hpsi_out,
 					const int ld_psi, const int nvec)
                     {
-                        auto psi_iter_wrapper = psi::Psi<std::complex<double>>(psi_in, 1, nvec, ld_psi, nullptr);
+                        auto psi_iter_wrapper = psi::Psi<std::complex<double>>(psi_in, 1, nvec, ld_psi, true);
                         psi::Range bands_range(true, 0, 0, nvec-1);
                         using hpsi_info = typename hamilt::Operator<std::complex<double>>::hpsi_info;
                         hpsi_info info(&psi_iter_wrapper, bands_range, hpsi_out);

@@ -159,7 +159,7 @@ void ESolver_FP::after_scf(UnitCell& ucell, const int istep)
                     this->pw_rhod->real2recip(this->pelec->charge->rho_save[is], this->pelec->charge->rhog_save[is]);
                 }
                 std::string fn =PARAM.globalv.global_out_dir + "/SPIN" + std::to_string(is + 1) + "_CHG.cube";
-                ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
+                ModuleIO::write_vdata_palgrid(Pgrid,
                                               data,
                                               is,
                                               PARAM.inp.nspin,
@@ -172,7 +172,7 @@ void ESolver_FP::after_scf(UnitCell& ucell, const int istep)
                 if (XC_Functional::get_func_type() == 3 || XC_Functional::get_func_type() == 5)
                 {
                     fn =PARAM.globalv.global_out_dir + "/SPIN" + std::to_string(is + 1) + "_TAU.cube";
-                    ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
+                    ModuleIO::write_vdata_palgrid(Pgrid,
                                                   this->pelec->charge->kin_r_save[is],
                                                   is,
                                                   PARAM.inp.nspin,
@@ -183,24 +183,6 @@ void ESolver_FP::after_scf(UnitCell& ucell, const int istep)
                 }
             }
         }
-        if (PARAM.inp.out_chg[0] != -1)
-        {
-            std::complex<double>** rhog_tot = (PARAM.inp.dm_to_rho)? this->pelec->charge->rhog : this->pelec->charge->rhog_save;
-            double** rhor_tot = (PARAM.inp.dm_to_rho)? this->pelec->charge->rho : this->pelec->charge->rho_save;
-            for (int is = 0; is < PARAM.inp.nspin; is++)
-            {
-                this->pw_rhod->real2recip(rhor_tot[is], rhog_tot[is]);
-            }
-            ModuleIO::write_rhog(PARAM.globalv.global_out_dir + PARAM.inp.suffix + "-CHARGE-DENSITY.restart",
-                                 PARAM.globalv.gamma_only_pw || PARAM.globalv.gamma_only_local,
-                                 this->pw_rhod,
-                                 PARAM.inp.nspin,
-                                 ucell.GT,
-                                 rhog_tot,
-                                 GlobalV::MY_POOL,
-                                 GlobalV::RANK_IN_POOL,
-                                 GlobalV::NPROC_IN_POOL);
-        }
 
         // 4) write potential
         if (PARAM.inp.out_pot == 1 || PARAM.inp.out_pot == 3)
@@ -209,7 +191,7 @@ void ESolver_FP::after_scf(UnitCell& ucell, const int istep)
             {
                 std::string fn =PARAM.globalv.global_out_dir + "/SPIN" + std::to_string(is + 1) + "_POT.cube";
 
-                ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
+                ModuleIO::write_vdata_palgrid(Pgrid,
                                               this->pelec->pot->get_effective_v(is),
                                               is,
                                               PARAM.inp.nspin,
@@ -234,7 +216,8 @@ void ESolver_FP::after_scf(UnitCell& ucell, const int istep)
                 this->pw_rhod,
                 this->pelec->charge,
                 &(ucell),
-                this->pelec->pot->get_fixed_v());
+                this->pelec->pot->get_fixed_v(),
+                this->solvent);
         }
 
         // 5) write ELF
@@ -259,6 +242,7 @@ void ESolver_FP::after_scf(UnitCell& ucell, const int istep)
                 this->pelec->charge->rho,
                 this->pelec->charge->kin_r,
                 this->pw_rhod,
+                this->Pgrid,
                 &(ucell),
                 PARAM.inp.out_elf[1]);
         }
@@ -284,7 +268,7 @@ void ESolver_FP::before_scf(UnitCell& ucell, const int istep)
             this->pw_rhod->collect_uniqgg();
         }
 
-        this->p_locpp->init_vloc(ucell,this->pw_rhod);
+        this->locpp.init_vloc(ucell, this->pw_rhod);
         ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "LOCAL POTENTIAL");
 
         this->pelec->omega = ucell.omega;
@@ -300,6 +284,53 @@ void ESolver_FP::before_scf(UnitCell& ucell, const int istep)
     }
 
     return;
+}
+
+void ESolver_FP::iter_finish(UnitCell& ucell, const int istep, int& iter)
+{
+    //! output charge density
+    if (PARAM.inp.out_chg[0] != -1)
+    {
+        if (iter % PARAM.inp.out_freq_elec == 0 || iter == PARAM.inp.scf_nmax || this->conv_esolver)
+        {
+            std::complex<double>** rhog_tot
+                = (PARAM.inp.dm_to_rho) ? this->pelec->charge->rhog : this->pelec->charge->rhog_save;
+            double** rhor_tot = (PARAM.inp.dm_to_rho) ? this->pelec->charge->rho : this->pelec->charge->rho_save;
+            for (int is = 0; is < PARAM.inp.nspin; is++)
+            {
+                this->pw_rhod->real2recip(rhor_tot[is], rhog_tot[is]);
+            }
+            ModuleIO::write_rhog(PARAM.globalv.global_out_dir + PARAM.inp.suffix + "-CHARGE-DENSITY.restart",
+                                 PARAM.globalv.gamma_only_pw || PARAM.globalv.gamma_only_local,
+                                 this->pw_rhod,
+                                 PARAM.inp.nspin,
+                                 ucell.GT,
+                                 rhog_tot,
+                                 GlobalV::MY_POOL,
+                                 GlobalV::RANK_IN_POOL,
+                                 GlobalV::NPROC_IN_POOL);
+
+            if (XC_Functional::get_func_type() == 3 || XC_Functional::get_func_type() == 5)
+            {
+                std::vector<std::complex<double>> kin_g_space(PARAM.inp.nspin * this->pelec->charge->ngmc, {0.0, 0.0});
+                std::vector<std::complex<double>*> kin_g;
+                for (int is = 0; is < PARAM.inp.nspin; is++)
+                {
+                    kin_g.push_back(kin_g_space.data() + is * this->pelec->charge->ngmc);
+                    this->pw_rhod->real2recip(this->pelec->charge->kin_r_save[is], kin_g[is]);
+                }
+                ModuleIO::write_rhog(PARAM.globalv.global_out_dir + PARAM.inp.suffix + "-TAU-DENSITY.restart",
+                                     PARAM.globalv.gamma_only_pw || PARAM.globalv.gamma_only_local,
+                                     this->pw_rhod,
+                                     PARAM.inp.nspin,
+                                     ucell.GT,
+                                     kin_g.data(),
+                                     GlobalV::MY_POOL,
+                                     GlobalV::RANK_IN_POOL,
+                                     GlobalV::NPROC_IN_POOL);
+            }
+        }
+    }
 }
 
 } // namespace ModuleESolver

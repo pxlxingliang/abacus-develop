@@ -46,9 +46,6 @@ ESolver_KS<T, Device>::ESolver_KS()
     maxniter = PARAM.inp.scf_nmax;
     niter = maxniter;
 
-    // should not use GlobalV here, mohan 2024-05-12
-    out_freq_elec = PARAM.inp.out_freq_elec;
-
     // pw_rho = new ModuleBase::PW_Basis();
     // temporary, it will be removed
     std::string fft_device = PARAM.inp.device;
@@ -69,7 +66,6 @@ ESolver_KS<T, Device>::ESolver_KS()
     p_chgmix = new Charge_Mixing();
     p_chgmix->set_rhopw(this->pw_rho, this->pw_rhod);
     this->ppcell.cell_factor = PARAM.inp.cell_factor;
-    this->p_locpp = &this->ppcell;
 }
 
 //------------------------------------------------------------------------------
@@ -108,7 +104,9 @@ void ESolver_KS<T, Device>::before_all_runners(UnitCell& ucell, const Input_para
                          PARAM.inp.mixing_gg0_mag,
                          PARAM.inp.mixing_gg0_min,
                          PARAM.inp.mixing_angle,
-                         PARAM.inp.mixing_dmr);
+                         PARAM.inp.mixing_dmr,
+                         ucell.omega,
+                         ucell.tpiba);
     p_chgmix->init_mixing();
 
     /// PAW Section
@@ -258,7 +256,7 @@ void ESolver_KS<T, Device>::before_all_runners(UnitCell& ucell, const Input_para
 
     //! 10) initialize the real-space uniform grid for FFT and parallel
     //! distribution of plane waves
-    GlobalC::Pgrid.init(this->pw_rhod->nx,
+    Pgrid.init(this->pw_rhod->nx,
                         this->pw_rhod->ny,
                         this->pw_rhod->nz,
                         this->pw_rhod->nplane,
@@ -267,7 +265,7 @@ void ESolver_KS<T, Device>::before_all_runners(UnitCell& ucell, const Input_para
                         pw_big->bz);
 
     //! 11) calculate the structure factor
-    this->sf.setup_structure_factor(&ucell, this->pw_rhod);
+    this->sf.setup_structure_factor(&ucell, Pgrid, this->pw_rhod);
 
 #ifdef USE_PAW
     if (PARAM.inp.use_paw)
@@ -546,7 +544,8 @@ void ESolver_KS<T, Device>::iter_finish(UnitCell& ucell, const int istep, int& i
     }
 
     // compute magnetization, only for LSDA(spin==2)
-    ucell.magnet.compute_magnetization(this->pelec->charge->nrxx,
+    ucell.magnet.compute_magnetization(ucell.omega,
+                                       this->pelec->charge->nrxx,
                                        this->pelec->charge->nxyz,
                                        this->pelec->charge->rho,
                                        this->pelec->nelec_spin.data());
@@ -671,7 +670,7 @@ void ESolver_KS<T, Device>::iter_finish(UnitCell& ucell, const int istep, int& i
     {
         dkin = p_chgmix->get_dkin(pelec->charge, PARAM.inp.nelec);
     }
-    this->pelec->print_etot(this->conv_esolver, iter, drho, dkin, duration, PARAM.inp.printe, diag_ethr);
+    this->pelec->print_etot(ucell.magnet,this->conv_esolver, iter, drho, dkin, duration, PARAM.inp.printe, diag_ethr);
 
     // Json, need to be moved to somewhere else
 #ifdef __RAPIDJSON
@@ -691,45 +690,7 @@ void ESolver_KS<T, Device>::iter_finish(UnitCell& ucell, const int istep, int& i
         std::cout << " SCF restart after this step!" << std::endl;
     }
 
-    //! output charge density and density matrix
-    if (this->out_freq_elec && iter % this->out_freq_elec == 0)
-    {
-        for (int is = 0; is < PARAM.inp.nspin; is++)
-        {
-            double* data = nullptr;
-            if (PARAM.inp.dm_to_rho)
-            {
-                data = this->pelec->charge->rho[is];
-            }
-            else
-            {
-                data = this->pelec->charge->rho_save[is];
-            }
-            std::string fn = PARAM.globalv.global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_CHG.cube";
-            ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
-                                          data,
-                                          is,
-                                          PARAM.inp.nspin,
-                                          0,
-                                          fn,
-                                          this->pelec->eferm.get_efval(is),
-                                          &(ucell),
-                                          3,
-                                          1);
-            if (XC_Functional::get_func_type() == 3 || XC_Functional::get_func_type() == 5)
-            {
-                fn = PARAM.globalv.global_out_dir + "/tmp_SPIN" + std::to_string(is + 1) + "_TAU.cube";
-                ModuleIO::write_vdata_palgrid(GlobalC::Pgrid,
-                                              this->pelec->charge->kin_r_save[is],
-                                              is,
-                                              PARAM.inp.nspin,
-                                              0,
-                                              fn,
-                                              this->pelec->eferm.get_efval(is),
-                                              &(ucell));
-            }
-        }
-    }
+    ESolver_FP::iter_finish(ucell, istep, iter);
 }
 
 //! Something to do after SCF iterations when SCF is converged or comes to the max iter step.

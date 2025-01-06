@@ -8,7 +8,7 @@
 #include "module_elecstate/module_dm/cal_dm_psi.h"
 #include "module_elecstate/module_dm/density_matrix.h"
 #include "module_elecstate/module_charge/symmetry_rho.h"
-
+#include "module_elecstate/elecstate_lcao_cal_tau.h"
 
 namespace rdmft
 {
@@ -47,7 +47,7 @@ void RDMFT<TK, TR>::update_ion(UnitCell& ucell_in,
 
 
 template <typename TK, typename TR>
-void RDMFT<TK, TR>::update_elec(const UnitCell& ucell,
+void RDMFT<TK, TR>::update_elec(UnitCell& ucell,
                                 const ModuleBase::matrix& occ_number_in, 
                                 const psi::Psi<TK>& wfc_in, const Charge* charge_in)
 {
@@ -71,7 +71,7 @@ void RDMFT<TK, TR>::update_elec(const UnitCell& ucell,
 }
 
     // update charge
-    this->update_charge();
+    this->update_charge(ucell);
 
     // "default" = "pbe"
     // if(  !only_exx_type || this->cal_E_type != 1 )
@@ -91,14 +91,14 @@ void RDMFT<TK, TR>::update_elec(const UnitCell& ucell,
 
 // this code is copying from function ElecStateLCAO<TK>::psiToRho(), in elecstate_lcao.cpp
 template <typename TK, typename TR>
-void RDMFT<TK, TR>::update_charge()
+void RDMFT<TK, TR>::update_charge(UnitCell& ucell)
 {
     if( PARAM.inp.gamma_only )
     {
         // calculate DMK and DMR
         elecstate::DensityMatrix<TK, double> DM_gamma_only(ParaV, nspin);
         elecstate::cal_dm_psi(ParaV, wg, wfc, DM_gamma_only);
-        DM_gamma_only.init_DMR(this->gd, &GlobalC::ucell);
+        DM_gamma_only.init_DMR(this->gd, &ucell);
         DM_gamma_only.cal_DMR();
 
         for (int is = 0; is < nspin; is++)
@@ -118,7 +118,7 @@ void RDMFT<TK, TR>::update_charge()
             // }
             // Gint_inout inout1(charge->kin_r, Gint_Tools::job_type::tau);
             // GG->cal_gint(&inout1);
-            this->pelec->cal_tau(wfc);
+            elecstate::lcao_cal_tau_gamma(GG, charge);
         }
 
         charge->renormalize_rho();
@@ -128,7 +128,7 @@ void RDMFT<TK, TR>::update_charge()
         // calculate DMK and DMR
         elecstate::DensityMatrix<TK, double> DM(ParaV, nspin, kv->kvec_d, nk_total);
         elecstate::cal_dm_psi(ParaV, wg, wfc, DM);
-        DM.init_DMR(this->gd, &GlobalC::ucell);
+        DM.init_DMR(this->gd, &ucell);
         DM.cal_DMR();
 
         for (int is = 0; is < nspin; is++)
@@ -148,7 +148,7 @@ void RDMFT<TK, TR>::update_charge()
             // }
             // Gint_inout inout1(charge->kin_r, Gint_Tools::job_type::tau);
             // GK->cal_gint(&inout1);
-            this->pelec->cal_tau(wfc);
+            elecstate::lcao_cal_tau_k(GK, charge);
         }
 
         charge->renormalize_rho();
@@ -160,7 +160,7 @@ void RDMFT<TK, TR>::update_charge()
     Symmetry_rho srho;
     for (int is = 0; is < nspin; is++)
     {
-        srho.begin(is, *(this->charge), rho_basis, GlobalC::ucell.symm);
+        srho.begin(is, *(this->charge), rho_basis, ucell.symm);
     }
 
 }

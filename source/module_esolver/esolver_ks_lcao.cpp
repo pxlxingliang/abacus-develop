@@ -34,6 +34,7 @@
 #include "module_base/global_function.h"
 #include "module_cell/module_neighbor/sltk_grid_driver.h"
 #include "module_elecstate/cal_ux.h"
+#include "module_elecstate/elecstate_lcao_cal_tau.h"
 #include "module_elecstate/module_charge/symmetry_rho.h"
 #include "module_elecstate/occupy.h"
 #include "module_hamilt_lcao/hamilt_lcaodft/LCAO_domain.h" // need divide_HS_in_frag
@@ -199,7 +200,7 @@ void ESolver_KS_LCAO<TK, TR>::before_all_runners(UnitCell& ucell, const Input_pa
     }
 
     // 8) initialize ppcell
-    this->ppcell.init_vloc(ucell, this->pw_rho);
+    this->locpp.init_vloc(ucell, this->pw_rho);
     ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "LOCAL POTENTIAL");
 
     // 9) inititlize the charge density
@@ -212,8 +213,9 @@ void ESolver_KS_LCAO<TK, TR>::before_all_runners(UnitCell& ucell, const Input_pa
         this->pelec->pot = new elecstate::Potential(this->pw_rhod,
                                                     this->pw_rho,
                                                     &ucell,
-                                                    &(this->ppcell.vloc),
+                                                    &(this->locpp.vloc),
                                                     &(this->sf),
+                                                    &(this->solvent),
                                                     &(this->pelec->f_en.etxc),
                                                     &(this->pelec->f_en.vtxc));
     }
@@ -301,11 +303,11 @@ void ESolver_KS_LCAO<TK, TR>::cal_force(UnitCell& ucell, ModuleBase::matrix& for
 
     Force_Stress_LCAO<TK> fsl(this->RA, ucell.nat);
 
-    fsl.getForceStress(PARAM.inp.cal_force,
+    fsl.getForceStress(ucell,
+                       PARAM.inp.cal_force,
                        PARAM.inp.cal_stress,
                        PARAM.inp.test_force,
                        PARAM.inp.test_stress,
-                       ucell,
                        this->gd,
                        this->pv,
                        this->pelec,
@@ -316,10 +318,11 @@ void ESolver_KS_LCAO<TK, TR>::cal_force(UnitCell& ucell, ModuleBase::matrix& for
                        orb_,
                        force,
                        this->scs,
-                       this->ppcell,
+                       this->locpp,
                        this->sf,
                        this->kv,
                        this->pw_rho,
+                       this->solvent,
 #ifdef __EXX
                        *this->exx_lri_double,
                        *this->exx_lri_complex,
@@ -460,9 +463,10 @@ void ESolver_KS_LCAO<TK, TR>::after_all_runners(UnitCell& ucell)
                                     *this->psi,
                                     ucell,
                                     this->sf,
+                                    this->solvent,
                                     *this->pw_rho,
                                     *this->pw_rhod,
-                                    this->ppcell.vloc,
+                                    this->locpp.vloc,
                                     *this->pelec->charge,
                                     this->GG,
                                     this->GK,
@@ -487,9 +491,10 @@ void ESolver_KS_LCAO<TK, TR>::after_all_runners(UnitCell& ucell)
                                             *this->psi,
                                             ucell,
                                             this->sf,
+                                            this->solvent,
                                             *this->pw_rho,
                                             *this->pw_rhod,
-                                            this->ppcell.vloc,
+                                            this->locpp.vloc,
                                             *this->pelec->charge,
                                             this->GG,
                                             this->GK,
@@ -570,7 +575,7 @@ void ESolver_KS_LCAO<TK, TR>::iter_init(UnitCell& ucell, const int istep, const 
     }
 
     // mohan update 2012-06-05
-    this->pelec->f_en.deband_harris = this->pelec->cal_delta_eband();
+    this->pelec->f_en.deband_harris = this->pelec->cal_delta_eband(ucell);
 
     // mohan move it outside 2011-01-13
     // first need to calculate the weight according to
@@ -760,7 +765,7 @@ void ESolver_KS_LCAO<TK, TR>::hamilt2density_single(UnitCell& ucell, int istep, 
     }
 
     // 12) calculate delta energy
-    this->pelec->f_en.deband = this->pelec->cal_delta_eband();
+    this->pelec->f_en.deband = this->pelec->cal_delta_eband(ucell);
 }
 
 //------------------------------------------------------------------------------
@@ -923,7 +928,9 @@ void ESolver_KS_LCAO<TK, TR>::after_scf(UnitCell& ucell, const int istep)
     // 1) calculate the kinetic energy density tau, sunliang 2024-09-18
     if (PARAM.inp.out_elf[0] > 0)
     {
-        this->pelec->cal_tau(*(this->psi));
+        elecstate::lcao_cal_tau<TK>(&(this->GG), 
+                                    &(this->GK),
+                                    this->pelec->charge);
     }
 
     //! 2) call after_scf() of ESolver_KS
@@ -1076,7 +1083,7 @@ void ESolver_KS_LCAO<TK, TR>::after_scf(UnitCell& ucell, const int istep)
         //! initialize the gradients of Etotal with respect to occupation numbers and wfc,
         //! and set all elements to 0.
         ModuleBase::matrix dE_dOccNum(this->pelec->wg.nr, this->pelec->wg.nc, true);
-        psi::Psi<TK> dE_dWfc(this->psi->get_nk(), this->psi->get_nbands(), this->psi->get_nbasis());
+        psi::Psi<TK> dE_dWfc(this->psi->get_nk(), this->psi->get_nbands(), this->psi->get_nbasis(), this->kv.ngk, true);
         dE_dWfc.zero_out();
 
         double Etotal_RDMFT = this->rdmft_solver.run(dE_dOccNum, dE_dWfc);

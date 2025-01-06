@@ -76,36 +76,8 @@ template void diago_hs_para<std::complex<float>>(std::complex<float>* h,
 }
 
 
-template <>
-elecstate::ElecStatePW<std::complex<double>, base_device::DEVICE_CPU>::ElecStatePW(ModulePW::PW_Basis_K* wfc_basis_in,
-                                    Charge* chg_in,
-                                    K_Vectors* pkv_in,
-                                    UnitCell* ucell_in,
-                                    pseudopot_cell_vnl* ppcell_in,
-                                    ModulePW::PW_Basis* rhodpw_in,
-                                    ModulePW::PW_Basis* rhopw_in,
-                                    ModulePW::PW_Basis_Big* bigpw_in)
-    : basis(wfc_basis_in)
-{
-}
-
-template<>
-elecstate::ElecStatePW<std::complex<double>, base_device::DEVICE_CPU>::~ElecStatePW() 
-{
-}
-
 template<>
 void elecstate::ElecStatePW<std::complex<double>, base_device::DEVICE_CPU>::init_rho_data() 
-{
-}
-
-template<>
-void elecstate::ElecStatePW<std::complex<double>, base_device::DEVICE_CPU>::psiToRho(const psi::Psi<std::complex<double>, base_device::DEVICE_CPU>& psi)
-{
-}
-
-template<>
-void elecstate::ElecStatePW<std::complex<double>, base_device::DEVICE_CPU>::cal_tau(const psi::Psi<std::complex<double>, base_device::DEVICE_CPU>& psi)
 {
 }
 
@@ -131,7 +103,6 @@ Stochastic_Iter<T, Device>::Stochastic_Iter()
 
 template <typename T, typename Device>
 Stochastic_Iter<T, Device>::~Stochastic_Iter(){};
-template class Stochastic_Iter<std::complex<double>, base_device::DEVICE_CPU>;
 
 template <typename T, typename Device>
 void Stochastic_Iter<T, Device>::init(K_Vectors* pkv_in,
@@ -210,6 +181,8 @@ void Stochastic_Iter<T, Device>::cal_storho(const UnitCell& ucell,
                                              ModulePW::PW_Basis_K* wfc_basis)
 {
 }
+
+template class Stochastic_Iter<std::complex<double>, base_device::DEVICE_CPU>;
 
 Charge::Charge(){};
 Charge::~Charge(){};
