@@ -1613,6 +1613,8 @@ These variables are used to control the output of properties.
     - nspin = 1: SPIN1_POT_INI.cube;
     - nspin = 2: SPIN1_POT_INI.cube, and SPIN2_POT_INI.cube;
     - nspin = 4: SPIN1_POT_INI.cube, SPIN2_POT_INI.cube, SPIN3_POT_INI.cube, and SPIN4_POT_INI.cube.
+  
+  - 4: Apart from 2, also output the **electrostatic potential** of the initial charge density into `OUT.${suffix}/ElecStaticPot_INI.cube`.
 
   In molecular dynamics calculations, the output frequency is controlled by [out_interval](#out_interval).
 - **Default**: 0

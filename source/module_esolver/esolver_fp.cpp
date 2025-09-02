@@ -203,7 +203,7 @@ void ESolver_FP::after_scf(UnitCell& ucell, const int istep)
                                               0); // out_fermi
             }
         }
-        else if (PARAM.inp.out_pot == 2)
+        else if (PARAM.inp.out_pot == 2 || PARAM.inp.out_pot == 4)
         {
             std::string fn =PARAM.globalv.global_out_dir + "/ElecStaticPot.cube";
             ModuleIO::write_elecstat_pot(

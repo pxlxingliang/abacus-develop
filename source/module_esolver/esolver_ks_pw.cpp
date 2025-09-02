@@ -345,6 +345,22 @@ void ESolver_KS_PW<T, Device>::before_scf(UnitCell& ucell, const int istep)
                                           0); // out_fermi
         }
     }
+    else if (PARAM.inp.out_pot == 4)
+    {
+        std::string fn =PARAM.globalv.global_out_dir + "/ElecStaticPot_INI.cube";
+        ModuleIO::write_elecstat_pot(
+#ifdef __MPI
+            this->pw_big->bz,
+            this->pw_big->nbz,
+#endif
+            fn,
+            istep,
+            this->pw_rhod,
+            this->pelec->charge,
+            &(ucell),
+            this->pelec->pot->get_fixed_v(),
+            this->solvent);
+    }
 
     //! Symmetry_rho should behind init_scf, because charge should be
     //! initialized first. liuyu comment: Symmetry_rho should be located between
